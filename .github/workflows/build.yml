@@ -1,0 +1,73 @@
+
+name: Build AutoScribe
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows-x64
+          - os: ubuntu-24.04
+            platform: linux-x64
+          - os: ubuntu-24.04-arm
+            platform: linux-arm64
+          - os: macos-15-intel
+            platform: macos-x64
+          - os: macos-latest
+            platform: macos-arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build application
+        run: >
+          pyinstaller --noconfirm --clean --onefile
+          --noconsole
+          --name AutoScribe
+          --collect-data customtkinter
+          main.py
+
+      - name: Copy runtime data
+        run: python -c "import shutil; shutil.copy2('locations.json', 'dist/locations.json')"
+
+      - name: Package application
+        shell: bash
+        run: |
+          cd dist
+          python -c "import os, platform; print(platform.system())"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            7z a "../AutoScribe-${{ matrix.platform }}.zip" AutoScribe.exe locations.json
+          else
+            chmod +x AutoScribe
+            zip "../AutoScribe-${{ matrix.platform }}.zip" AutoScribe locations.json
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AutoScribe-${{ matrix.platform }}
+          path: AutoScribe-${{ matrix.platform }}.zip
+          if-no-files-found: error
+          retention-days: 30
