@@ -36,7 +36,7 @@ AutoScribe — это настольное приложение, которое 
 ## Требования
 
 - **Windows 10/11** (на Linux и macOS тоже должно работать, если `windscribe-cli` есть в `PATH`)
-- **Python 3.9+** с Tkinter (входит в стандартный установщик Python для Windows)
+- **Python 3.9+** и Microsoft Edge WebView2 (встроен в Windows 10/11)
 - **Настольное приложение Windscribe** с выполненным входом в аккаунт. CLI устанавливается по пути `C:\Program Files\Windscribe\windscribe-cli.exe`.
 
 ## Установка
@@ -95,7 +95,7 @@ python main.py
 
 ```bash
 pip install pyinstaller
-pyinstaller --noconsole --onefile --name AutoScribe --collect-data customtkinter main.py
+pyinstaller --noconsole --onefile --name AutoScribe --add-data "web;web" main.py
 ```
 
 Положите `locations.json` в ту же папку, что и `dist\AutoScribe.exe`.

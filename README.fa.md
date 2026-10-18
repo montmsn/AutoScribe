@@ -39,7 +39,7 @@ AutoScribe یک برنامهٔ دسکتاپ است که **Windscribe CLI** رس�
 ## پیش‌نیازها
 
 - **ویندوز ۱۰ یا ۱۱** (اگر `windscribe-cli` در `PATH` باشد، روی لینوکس و مک هم باید کار کند)
-- **پایتون 3.9 یا جدیدتر** همراه با Tkinter (در نصب‌کنندهٔ استاندارد پایتون برای ویندوز وجود دارد)
+- **پایتون 3.9 یا جدیدتر** و Microsoft Edge WebView2 (در ویندوز ۱۰ و ۱۱ وجود دارد)
 - **برنامهٔ دسکتاپ Windscribe** که با حساب کاربری وارد آن شده باشید. فایل CLI در این مسیر نصب می‌شود: `C:\Program Files\Windscribe\windscribe-cli.exe`
 
 ## نصب
@@ -104,7 +104,7 @@ python main.py
 
 ```bash
 pip install pyinstaller
-pyinstaller --noconsole --onefile --name AutoScribe --collect-data customtkinter main.py
+pyinstaller --noconsole --onefile --name AutoScribe --add-data "web;web" main.py
 ```
 
 <div dir="rtl">

@@ -191,6 +191,17 @@ STRINGS = {
     "opt_stop_tip": {"en": "End the run as soon as one route works and stay connected.",
                      "fa": "به محض کار کردن یک مسیر، تست متوقف می‌شود و اتصال برقرار می‌ماند.",
                      "ru": "Завершить тест, как только заработает маршрут, и остаться подключённым."},
+    "opt_smart": {"en": "Smart scan (much faster)", "fa": "اسکن هوشمند (بسیار سریع‌تر)",
+                  "ru": "Умное сканирование (гораздо быстрее)"},
+    "opt_smart_tip": {"en": "First finds which protocol:port routes work on your network using a few servers, "
+                            "then tests all servers with only those routes. Also drops routes that keep failing "
+                            "and shortens the timeout once it learns how fast connections are.",
+                      "fa": "ابتدا با چند سرور مشخص می‌کند کدام پروتکل:پورت روی شبکهٔ شما کار می‌کند، سپس همهٔ "
+                            "سرورها را فقط با همان مسیرها تست می‌کند. مسیرهایی که مدام شکست می‌خورند حذف می‌شوند "
+                            "و زمان انتظار بر اساس سرعت اتصال‌ها کوتاه می‌شود.",
+                      "ru": "Сначала на нескольких серверах находит рабочие маршруты протокол:порт, затем "
+                            "проверяет все серверы только с ними. Отбрасывает постоянно падающие маршруты и "
+                            "сокращает таймаут, узнав скорость подключений."},
     "timing_summary": {"en": "Ping & timing · {host} · {count} pings · {timeout} s",
                        "fa": "پینگ و زمان‌بندی · {host} · {count} پینگ · {timeout} ثانیه",
                        "ru": "Пинг и тайминги · {host} · пингов: {count} · {timeout} с"},

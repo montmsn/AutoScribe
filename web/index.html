@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoScribe</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="bg-glow" aria-hidden="true"></div>
+
+<div id="app" class="app">
+  <!-- ============ Sidebar ============ -->
+  <aside id="sidebar" class="sidebar">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M4.5 10.5a10.6 10.6 0 0 1 15 0"/><path d="M7.6 13.6a6.2 6.2 0 0 1 8.8 0"/><path d="M10.6 16.6a1.9 1.9 0 0 1 2.8 0"/><circle cx="12" cy="19.4" r="1.2" class="fill"/></svg>
+      </div>
+      <div class="brand-text">
+        <div class="brand-name">AutoScribe</div>
+        <div class="brand-sub" id="tagline"></div>
+      </div>
+      <button class="icon-btn ghost" id="btn-collapse" data-tip-key="hide_panel_tip">
+        <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+    </div>
+
+    <div class="side-scroll">
+      <section class="side-section">
+        <div class="section-head"><span data-t="profile"></span></div>
+        <div class="row gap6">
+          <div class="select-wrap grow">
+            <select id="sel-profile"></select>
+            <svg viewBox="0 0 24 24" class="chev"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <button class="icon-btn" id="btn-save-profile" data-tip-key="save_profile_tip">
+            <svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4"/><path d="M8 20v-6h8v6"/></svg>
+          </button>
+          <button class="icon-btn danger-hover" id="btn-del-profile" data-tip-key="delete_profile_tip">
+            <svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg>
+          </button>
+        </div>
+      </section>
+
+      <section class="side-section">
+        <div class="section-head">
+          <span data-t="locations"></span>
+          <button class="link-btn" id="btn-update-list"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg><span data-t="update_list"></span></button>
+        </div>
+        <button class="scope-card" id="scope-card">
+          <div class="scope-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18"/><path d="M12 3a14 14 0 0 0 0 18"/></svg></div>
+          <div class="scope-text">
+            <div class="scope-title" id="scope-title"></div>
+            <div class="scope-sub" id="scope-sub"></div>
+          </div>
+          <span class="scope-change" data-t="change"></span>
+        </button>
+        <div class="scope-math">
+          <span id="scope-math"></span>
+          <b id="scope-tests"></b>
+        </div>
+        <div class="hint warn hidden" id="no-list-hint" data-t="no_list_hint"></div>
+      </section>
+
+      <section class="side-section">
+        <div class="section-head"><span data-t="protocols"></span><small data-t="top_first"></small></div>
+        <div id="proto-list" class="proto-list"></div>
+      </section>
+
+      <section class="side-section">
+        <div class="section-head"><span data-t="options"></span></div>
+        <div id="options"></div>
+      </section>
+
+      <section class="side-section">
+        <button class="disclosure" id="btn-timing">
+          <svg viewBox="0 0 24 24" class="disc-chev"><path d="M9 6l6 6-6 6"/></svg>
+          <span id="timing-summary"></span>
+        </button>
+        <div id="timing" class="timing hidden">
+          <label class="field span2"><span data-t="ping_host"></span><input id="in-host" dir="ltr" spellcheck="false"></label>
+          <label class="field"><span data-t="pings_per_test"></span><input id="in-pings" type="number" min="1" max="20" dir="ltr"></label>
+          <label class="field"><span data-t="connect_timeout"></span><input id="in-timeout" type="number" min="3" max="300" dir="ltr"></label>
+          <label class="field"><span data-t="settle_delay"></span><input id="in-settle" type="number" min="0" max="60" dir="ltr"></label>
+          <label class="field span2"><span data-t="windscribe_cli"></span>
+            <div class="row gap6"><input id="in-cli" class="grow" dir="ltr" spellcheck="false"><button class="btn small" id="btn-browse" data-t="browse"></button></div>
+          </label>
+        </div>
+      </section>
+    </div>
+
+    <div class="side-foot">
+      <div class="seg" id="seg-lang"></div>
+      <button class="cli-pill" id="cli-pill"><span class="dot"></span><span id="cli-text"></span></button>
+    </div>
+  </aside>
+
+  <!-- ============ Main ============ -->
+  <main class="main">
+    <header class="topbar">
+      <button class="icon-btn ghost hidden" id="btn-expand" data-tip-key="show_panel_tip">
+        <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <div class="title-block">
+        <div class="row gap10 center">
+          <h1 id="title"></h1>
+          <span class="badge hidden" id="badge"></span>
+        </div>
+        <div class="subtitle" id="subtitle"></div>
+      </div>
+      <span class="conn-chip hidden" id="conn-chip"><span class="pulse"></span><span id="conn-text"></span></span>
+      <button class="btn" id="btn-export" data-tip-key="export_tip">
+        <svg viewBox="0 0 24 24"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg><span data-t="export_csv"></span>
+      </button>
+      <button class="btn" id="btn-disconnect" data-tip-key="disconnect_tip">
+        <svg viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M6.3 7.5a8 8 0 1 0 11.4 0"/></svg><span data-t="disconnect"></span>
+      </button>
+      <button class="btn primary" id="btn-start" data-tip-key="start_tip">
+        <svg viewBox="0 0 24 24" class="fill-icon"><path d="M8 5v14l11-7z"/></svg><span id="start-text"></span>
+      </button>
+      <button class="btn stop hidden" id="btn-stop">
+        <svg viewBox="0 0 24 24" class="fill-icon"><rect x="6" y="6" width="12" height="12" rx="2"/></svg><span id="stop-text"></span>
+      </button>
+    </header>
+
+    <!-- Hero: live test / best route / ready -->
+    <section class="hero card" id="hero-live">
+      <div class="hero-top">
+        <div class="hero-info">
+          <div class="caption" id="live-caption"></div>
+          <div class="hero-target" id="live-target">–</div>
+          <div class="row gap8 center"><span class="muted" id="live-sub"></span><span class="chip mono hidden" id="live-route"></span></div>
+        </div>
+        <div class="ping-gauge">
+          <svg viewBox="0 0 120 120" class="gauge">
+            <circle cx="60" cy="60" r="50" class="gauge-track"/>
+            <circle cx="60" cy="60" r="50" class="gauge-fill" id="gauge-fill"/>
+          </svg>
+          <div class="gauge-label"><div class="mono gauge-value" id="live-ping">–</div><div class="gauge-unit" data-t="ms"></div></div>
+          <div class="mono muted small gauge-detail" id="live-ping-detail"></div>
+        </div>
+      </div>
+      <div class="phases" id="phases"></div>
+      <div class="progress"><div class="progress-fill" id="progress-fill"></div></div>
+      <div class="row between small muted"><span id="prog-left"></span><span id="prog-right"></span></div>
+    </section>
+
+    <section class="hero card best hidden" id="hero-best">
+      <div class="best-glow" aria-hidden="true"></div>
+      <div class="hero-info">
+        <div class="caption accent" data-t="best_route_caption"></div>
+        <div class="hero-target" id="best-name"></div>
+        <div class="row gap8 center"><span class="muted" id="best-country"></span><span class="chip mono" id="best-route"></span></div>
+      </div>
+      <div class="best-stats">
+        <div><div class="k" data-t="ping"></div><div class="v mono" id="best-ping"></div></div>
+        <div><div class="k" data-t="loss"></div><div class="v mono" id="best-loss"></div></div>
+        <div><div class="k" data-t="connect_time"></div><div class="v mono" id="best-time"></div></div>
+      </div>
+      <button class="btn primary big" id="btn-best-connect"><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg><span data-t="connect_btn"></span></button>
+    </section>
+
+    <section class="hero card ready hidden" id="hero-ready">
+      <div class="ready-art" aria-hidden="true">
+        <span></span><span></span><span></span>
+        <svg viewBox="0 0 24 24"><path d="M4.5 10.5a10.6 10.6 0 0 1 15 0"/><path d="M7.6 13.6a6.2 6.2 0 0 1 8.8 0"/><path d="M10.6 16.6a1.9 1.9 0 0 1 2.8 0"/><circle cx="12" cy="19.4" r="1.2" class="fill"/></svg>
+      </div>
+      <div class="hero-info">
+        <div class="caption accent" data-t="cap_ready"></div>
+        <div class="hero-target" id="ready-title"></div>
+        <div class="muted" id="ready-sub"></div>
+      </div>
+      <div class="kbd-hint"><span data-t="press_start"></span></div>
+    </section>
+
+    <!-- Stats -->
+    <section class="stats" id="stats"></section>
+
+    <!-- Results + insights -->
+    <section class="bottom">
+      <div class="card results">
+        <div class="results-bar">
+          <div class="tabs" id="tabs"></div>
+          <div class="tools" id="results-tools">
+            <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="in-search"></div>
+            <div class="pills" id="filters"></div>
+          </div>
+          <div class="tools hidden" id="log-tools">
+            <button class="btn small" id="btn-log-clear" data-t="clear"></button>
+            <button class="btn small" id="btn-log-copy" data-t="copy"></button>
+          </div>
+        </div>
+        <div class="results-body">
+          <div class="table-wrap" id="view-results"><table class="grid" id="tbl-results"><thead></thead><tbody></tbody></table><div class="empty hidden" id="empty-results"></div></div>
+          <div class="table-wrap hidden" id="view-best"><table class="grid" id="tbl-best"><thead></thead><tbody></tbody></table><div class="empty hidden" id="empty-best"></div></div>
+          <div class="log hidden" id="view-log"></div>
+        </div>
+      </div>
+
+      <aside class="insights">
+        <div class="card pad">
+          <h3 data-t="works_title"></h3>
+          <div class="muted small" data-t="works_sub"></div>
+          <div id="works" class="works"></div>
+          <div class="tip hidden" id="works-tip"></div>
+        </div>
+        <div class="card pad">
+          <h3 id="dist-title"></h3>
+          <div class="muted small" id="dist-sub"></div>
+          <div class="dist" id="dist"></div>
+        </div>
+      </aside>
+    </section>
+  </main>
+</div>
+
+<!-- Location picker -->
+<div class="modal-back hidden" id="picker">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h2 data-t="choose_locations"></h2>
+        <div class="muted small" data-t="picker_hint"></div>
+      </div>
+      <button class="icon-btn ghost" id="picker-close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="search big"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="picker-search"></div>
+    <div class="pills wrap" id="picker-regions"></div>
+    <div class="picker-list" id="picker-list"></div>
+    <div class="modal-foot">
+      <span class="muted small grow" id="picker-count"></span>
+      <button class="btn" id="picker-shown" data-t="select_shown"></button>
+      <button class="btn" id="picker-clear" data-t="clear"></button>
+      <button class="btn primary" id="picker-done" data-t="done"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Prompt dialog -->
+<div class="modal-back hidden" id="dialog">
+  <div class="modal small">
+    <h2 id="dialog-title"></h2>
+    <div class="muted" id="dialog-text"></div>
+    <input id="dialog-input" class="hidden">
+    <div class="modal-foot">
+      <span class="grow"></span>
+      <button class="btn" id="dialog-cancel" data-t="cancel"></button>
+      <button class="btn primary" id="dialog-ok"></button>
+    </div>
+  </div>
+</div>
+
+<div class="menu hidden" id="row-menu"></div>
+<div class="tooltip hidden" id="tooltip"></div>
+<div class="toasts" id="toasts"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

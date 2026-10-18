@@ -1,0 +1,7 @@
+__pycache__/
+config.json
+windscribe_results.db*
+reports/
+build/
+dist/
+*.spec

@@ -36,7 +36,7 @@ throttled and you'd otherwise have to try routes by hand.
 ## Requirements
 
 - **Windows 10/11** (Linux and macOS should work too if `windscribe-cli` is on your `PATH`)
-- **Python 3.9+** with Tkinter (included in the standard Windows installer)
+- **Python 3.9+** and the Microsoft Edge WebView2 runtime (built into Windows 10/11)
 - **Windscribe desktop app**, signed in. It ships the CLI at `C:\Program Files\Windscribe\windscribe-cli.exe`.
 
 ## Installation
@@ -95,7 +95,7 @@ python main.py
 
 ```bash
 pip install pyinstaller
-pyinstaller --noconsole --onefile --name AutoScribe --collect-data customtkinter main.py
+pyinstaller --noconsole --onefile --name AutoScribe --add-data "web;web" main.py
 ```
 
 Put `locations.json` in the same folder as `dist\AutoScribe.exe`.
