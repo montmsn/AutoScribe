@@ -75,4 +75,7 @@
     <string name="phase_route">Route</string>
     <string name="phase_connect">Connect</string>
     <string name="phase_ping">Ping</string>
+    <string name="step_paused">Paused – unlock the phone to continue</string>
+    <string name="keep_screen_on">Keep the screen on during tests</string>
+    <string name="keep_screen_on_hint">The phone will not lock while testing. If you lock it yourself, the test pauses and continues after you unlock.</string>
 </resources>

@@ -53,6 +53,11 @@ class Store(private val context: Context) {
         get() = prefs.getBoolean("skip_tested", true)
         set(v) = prefs.edit().putBoolean("skip_tested", v).apply()
 
+    /** Keeps the screen awake while a test runs, so the phone does not lock mid-test. */
+    var keepScreenOn: Boolean
+        get() = prefs.getBoolean("keep_screen_on", true)
+        set(v) = prefs.edit().putBoolean("keep_screen_on", v).apply()
+
     /** Assisted mode: the user connects Windscribe by hand and AutoScribe only measures. */
     var assisted: Boolean
         get() = prefs.getBoolean("assisted", false)

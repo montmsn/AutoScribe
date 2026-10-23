@@ -1,6 +1,8 @@
 package com.autoscribe.android
 
+import android.app.KeyguardManager
 import android.content.Context
+import android.os.PowerManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
@@ -23,6 +25,7 @@ enum class Step(val res: Int) {
     WAIT_USER(R.string.step_wait_user),
     WAIT_USER_DISCONNECT(R.string.step_wait_user_disconnect),
     PING(R.string.step_ping),
+    PAUSED(R.string.step_paused),
     DONE(R.string.step_done),
     KEPT(R.string.step_kept),
     ERROR(R.string.step_error),
@@ -110,10 +113,53 @@ object TestRunner {
         return Vpn.isUp(context) == up
     }
 
+    private fun isLocked(context: Context): Boolean {
+        val power = context.getSystemService(PowerManager::class.java)
+        val keyguard = context.getSystemService(KeyguardManager::class.java)
+        return power?.isInteractive == false || keyguard?.isKeyguardLocked == true
+    }
+
+    /** Pauses while the phone is locked: Windscribe cannot be operated behind the lock screen. */
+    private suspend fun awaitUnlocked(context: Context) {
+        if (!isLocked(context)) return
+        val previous = _state.value.step
+        update(Step.PAUSED)
+        while (isLocked(context)) delay(1000)
+        delay(1500) // let the launcher or the previous app settle after unlocking
+        update(previous)
+    }
+
+    /** Runs one Windscribe UI action; if the phone got locked meanwhile, waits for unlock and retries once. */
+    private suspend fun automate(context: Context, action: suspend () -> Unit) {
+        awaitUnlocked(context)
+        try {
+            withContext(Dispatchers.Main) { action() }
+        } catch (e: AutomationException) {
+            if (!isLocked(context)) throw e
+            awaitUnlocked(context)
+            withContext(Dispatchers.Main) { action() }
+        }
+    }
+
     private suspend fun run(context: Context, store: Store, tasks: List<Pair<Route, Pop>>): Step {
         val assisted = store.assisted
         val service = WindscribeAccessibilityService.instance
         if (!assisted && service == null) throw AutomationException("the accessibility service is off")
+        if (store.keepScreenOn) withContext(Dispatchers.Main) { service?.setKeepScreenOn(true) }
+        try {
+            return runTasks(context, store, tasks, assisted, service)
+        } finally {
+            withContext(NonCancellable + Dispatchers.Main) { service?.setKeepScreenOn(false) }
+        }
+    }
+
+    private suspend fun runTasks(
+        context: Context,
+        store: Store,
+        tasks: List<Pair<Route, Pop>>,
+        assisted: Boolean,
+        service: WindscribeAccessibilityService?,
+    ): Step {
         var currentRoute: Route? = null
 
         for ((i, task) in tasks.withIndex()) {
@@ -133,17 +179,17 @@ object TestRunner {
                 service!!
                 if (Vpn.isUp(context)) {
                     update(Step.DISCONNECT)
-                    withContext(Dispatchers.Main) { service.toggleConnection() }
+                    automate(context) { service.toggleConnection() }
                     if (!waitVpn(context, false, 15_000)) throw AutomationException("Windscribe did not disconnect")
                 }
                 if (route != currentRoute) {
                     update(Step.PROTOCOL)
-                    withContext(Dispatchers.Main) { service.setRoute(route) }
+                    automate(context) { service.setRoute(route) }
                     currentRoute = route
                 }
                 update(Step.CONNECT)
                 t0 = System.currentTimeMillis()
-                withContext(Dispatchers.Main) { service.connectTo(pop) }
+                automate(context) { service.connectTo(pop) }
                 connected = waitVpn(context, true, store.connectTimeout * 1000L)
             }
             val duration = (System.currentTimeMillis() - t0) / 1000.0
@@ -174,7 +220,7 @@ object TestRunner {
                 }
             } else if (Vpn.isUp(context)) {
                 update(Step.DISCONNECT)
-                withContext(Dispatchers.Main) { service!!.toggleConnection() }
+                automate(context) { service!!.toggleConnection() }
                 waitVpn(context, false, 15_000)
             }
         }

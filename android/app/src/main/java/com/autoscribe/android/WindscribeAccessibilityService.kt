@@ -5,7 +5,10 @@ import android.accessibilityservice.GestureDescription
 import android.content.Intent
 import android.graphics.Path
 import android.graphics.Rect
+import android.graphics.PixelFormat
 import android.os.Bundle
+import android.view.View
+import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import kotlinx.coroutines.delay
@@ -52,7 +55,33 @@ class WindscribeAccessibilityService : AccessibilityService() {
 
     override fun onInterrupt() {}
 
+    private var keepOnView: View? = null
+
+    /**
+     * A 1×1 invisible accessibility overlay with FLAG_KEEP_SCREEN_ON keeps the display awake
+     * even while Windscribe is in front. Accessibility overlays need no extra permission.
+     */
+    fun setKeepScreenOn(on: Boolean) {
+        val wm = getSystemService(WindowManager::class.java)
+        if (on && keepOnView == null) {
+            val view = View(this)
+            val params = WindowManager.LayoutParams(
+                1, 1,
+                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                PixelFormat.TRANSLUCENT,
+            )
+            runCatching { wm.addView(view, params); keepOnView = view }
+        } else if (!on) {
+            keepOnView?.let { runCatching { wm.removeView(it) } }
+            keepOnView = null
+        }
+    }
+
     override fun onDestroy() {
+        setKeepScreenOn(false)
         if (instance === this) instance = null
         super.onDestroy()
     }

@@ -400,6 +400,8 @@ class MainActivity : AppCompatActivity() {
         val timeout = field(R.string.connect_timeout, store.connectTimeout.toString(), true)
         val stopFirst = switch(R.string.stop_on_success, store.stopOnSuccess)
         val skip = switch(R.string.skip_tested, store.skipTested)
+        val keepOn = switch(R.string.keep_screen_on, store.keepScreenOn)
+        root.addView(TextView(this).apply { setText(R.string.keep_screen_on_hint); textSize = 12f })
         val assisted = switch(R.string.assisted_mode, store.assisted)
         root.addView(TextView(this).apply { setText(R.string.assisted_hint); textSize = 12f })
 
@@ -412,6 +414,7 @@ class MainActivity : AppCompatActivity() {
                 store.connectTimeout = timeout.text.toString().toIntOrNull()?.coerceIn(5, 120) ?: 25
                 store.stopOnSuccess = stopFirst.isChecked
                 store.skipTested = skip.isChecked
+                store.keepScreenOn = keepOn.isChecked
                 store.assisted = assisted.isChecked
                 renderService()
                 renderPlan()

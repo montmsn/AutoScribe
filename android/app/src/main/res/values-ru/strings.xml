@@ -74,4 +74,7 @@
     <string name="phase_route">Маршрут</string>
     <string name="phase_connect">Подключение</string>
     <string name="phase_ping">Пинг</string>
+    <string name="step_paused">Пауза – разблокируйте телефон, чтобы продолжить</string>
+    <string name="keep_screen_on">Не выключать экран во время теста</string>
+    <string name="keep_screen_on_hint">Телефон не заблокируется во время теста. Если заблокировать его вручную, тест встанет на паузу и продолжится после разблокировки.</string>
 </resources>
