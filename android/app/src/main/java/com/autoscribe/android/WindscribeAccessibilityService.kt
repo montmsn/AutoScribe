@@ -42,6 +42,8 @@ class WindscribeAccessibilityService : AccessibilityService() {
         const val DROPDOWN_ID = "dropdown_selector"
         val POPUP_DISMISS_IDS = listOf("preferred_protocol_cancel", "battery_dont_ask_again")
         val AUTO_TEXTS = listOf("Auto")
+        // "Manual connection mode failed" and the protocol-change screen shown after a failed connect.
+        val FAILURE_CANCEL_TEXTS = listOf("Cancel")
         val MANUAL_TEXTS = listOf("Manual")
         const val PROTOCOL_TITLE = "Protocol"
         const val PORT_TITLE = "Port"
@@ -189,13 +191,25 @@ class WindscribeAccessibilityService : AccessibilityService() {
 
     fun isConnectedOnScreen(): Boolean = findById(listOf(Ui.STATUS_CONNECTED)) != null
 
-    /** Closes the popups Windscribe (and Android's first-time VPN consent) may show while connecting. */
-    fun dismissPopups() {
+    /**
+     * Closes the popups Windscribe (and Android's first-time VPN consent) may show while connecting.
+     * Returns true when Windscribe reported the connection as failed (its failure screen was cancelled).
+     */
+    fun dismissPopups(): Boolean {
+        val failure = allNodes().firstOrNull {
+            it.isVisibleToUser && it.packageName?.toString() == Ui.PACKAGE &&
+                Ui.FAILURE_CANCEL_TEXTS.any { t -> it.label().equals(t, true) }
+        }
+        if (failure != null) {
+            click(failure)
+            return true
+        }
         findById(Ui.POPUP_DISMISS_IDS)?.let { click(it) }
         allNodes().firstOrNull {
             it.isVisibleToUser && it.label().equals("OK", true) &&
                 it.packageName?.toString() in setOf(Ui.PACKAGE, Ui.VPN_DIALOGS)
         }?.let { click(it) }
+        return false
     }
 
     /** Searches the location list for [pop] and taps it; Windscribe connects on tap. */
