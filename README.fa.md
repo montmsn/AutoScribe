@@ -118,7 +118,7 @@ pyinstaller --noconsole --onefile --name AutoScribe --add-data "web;web" main.py
 می‌کند، پروتکل و پورت را تنظیم می‌کند، وصل می‌شود، پینگ و packet loss را از داخل تونل اندازه می‌گیرد و
 مسیرهای سالم را رتبه‌بندی می‌کند.
 
-- فایل `AutoScribe-android.apk` را از اجرای workflow به نام **Build Android** (زبانهٔ Actions) یا از بخش Releases دانلود و نصب کنید.
+- فایل `AutoScribe-android.apk` را از بخش Artifacts در اجرای workflow به نام **Build AutoScribe** (زبانهٔ Actions) یا از بخش Releases دانلود و نصب کنید.
 - Windscribe را از گوگل‌پلی نصب کنید، وارد حساب شوید و زبانش را روی انگلیسی بگذارید.
 - AutoScribe را باز کنید، روی نشان وضعیت بالای صفحه بزنید و سرویس دسترسی‌پذیری **AutoScribe** را روشن کنید.
 - مکان‌ها و پروتکل‌ها را انتخاب کنید و **شروع** را بزنید. تا پایان تست، صفحهٔ گوشی را روشن و باز نگه دارید.

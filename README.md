@@ -106,7 +106,7 @@ The `android/` folder has an Android version. Android has no Windscribe CLI, so 
 official **Windscribe app** for you through an accessibility service: it picks each server, sets the
 protocol and port, connects, measures ping and packet loss through the tunnel and ranks the routes that work.
 
-- Download `AutoScribe-android.apk` from the **Build Android** workflow run (Actions tab) or from a release, then install it.
+- Download `AutoScribe-android.apk` from the **AutoScribe-android** artifact of the **Build AutoScribe** workflow run (Actions tab) or from a release, then install it.
 - Install Windscribe from Google Play, sign in and set its language to English.
 - Open AutoScribe, tap the status chip at the top and turn on the **AutoScribe** accessibility service.
 - Choose locations and protocols, then tap **Start**. Keep the screen on and unlocked while it runs.
