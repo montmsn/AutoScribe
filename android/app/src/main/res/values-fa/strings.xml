@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_label">AutoScribe – خودکارسازی Windscribe</string>
+    <string name="accessibility_description">به AutoScribe اجازه می‌دهد برنامهٔ Windscribe را به‌جای شما کار کند: انتخاب سرور، تغییر پروتکل و پورت، اتصال و قطع اتصال. فقط برنامهٔ Windscribe را می‌خواند و کنترل می‌کند.</string>
+    <string name="locations">مکان‌ها</string>
+    <string name="protocols">پروتکل‌ها</string>
+    <string name="start">شروع</string>
+    <string name="stop">توقف</string>
+    <string name="settings">تنظیمات</string>
+    <string name="export_csv">خروجی CSV</string>
+    <string name="dump_screen">ذخیرهٔ صفحهٔ Windscribe</string>
+    <string name="clear_results">پاک کردن نتایج</string>
+    <string name="language">زبان</string>
+    <string name="language_system">زبان سیستم</string>
+    <string name="windscribe_missing">Windscribe نصب نیست. اول آن را از گوگل‌پلی نصب کنید و وارد حساب شوید.</string>
+    <string name="assisted_on">حالت دستی: شما Windscribe را وصل می‌کنید و AutoScribe اندازه می‌گیرد.</string>
+    <string name="service_on">✅ سرویس خودکارسازی روشن است</string>
+    <string name="service_off">⚠️ سرویس خودکارسازی خاموش است – برای روشن کردن بزنید</string>
+    <string name="plan_summary">%1$d مکان × %2$d مسیر = %3$d تست (%4$d هنوز تست نشده)</string>
+    <string name="step_line">[%1$d/%2$d] %3$s\n%4$s</string>
+    <string name="best_route">بهترین: %1$s · %2$s · %3$s میلی‌ثانیه</string>
+    <string name="no_best">هنوز مسیر سالمی پیدا نشده</string>
+    <string name="tab_best">بهترین مسیرها</string>
+    <string name="tab_results">همهٔ نتایج</string>
+    <string name="need_service">سرویس دسترسی‌پذیری AutoScribe را روشن کنید تا بتواند برنامهٔ Windscribe را کار کند. یا در تنظیمات، حالت دستی را روشن کنید.</string>
+    <string name="open_settings">باز کردن تنظیمات</string>
+    <string name="cancel">لغو</string>
+    <string name="ok">تأیید</string>
+    <string name="nothing_to_test">چیزی برای تست نمانده. انتخاب‌ها را تغییر دهید یا نتایج را پاک کنید.</string>
+    <string name="search">جستجوی کشور، شهر یا سرور</string>
+    <string name="selected_count">%1$d انتخاب شده (هیچ = همهٔ سرورها)</string>
+    <string name="select_none">پاک کردن</string>
+    <string name="update_list">به‌روزرسانی فهرست</string>
+    <string name="list_updated">فهرست سرورها به‌روز شد: %1$d سرور</string>
+    <string name="list_failed">فهرست به‌روز نشد: %1$s</string>
+    <string name="ports_for">پورت‌های %1$s</string>
+    <string name="ping_host">میزبان پینگ</string>
+    <string name="ping_count">تعداد پینگ</string>
+    <string name="connect_timeout">مهلت اتصال (ثانیه)</string>
+    <string name="stop_on_success">توقف با اولین اتصال موفق</string>
+    <string name="skip_tested">رد کردن موارد تست‌شده</string>
+    <string name="assisted_mode">حالت دستی (خودم وصل می‌کنم)</string>
+    <string name="assisted_hint">در حالت دستی، AutoScribe نشان می‌دهد کدام سرور و پروتکل را امتحان کنید؛ شما در Windscribe وصل می‌شوید، AutoScribe اندازه می‌گیرد و بعد برای مورد بعدی قطع می‌کنید. اگر خودکارسازی با نسخهٔ Windscribe شما کار نکرد از این حالت استفاده کنید.</string>
+    <string name="dump_hint">الان Windscribe باز می‌شود. به صفحه‌ای که مشکل دارد بروید؛ ۱۰ ثانیهٔ دیگر ذخیره می‌شود.</string>
+    <string name="clear_confirm">همهٔ نتایج تست پاک شوند؟</string>
+    <string name="connect_manually">در Windscribe به %1$s با %2$s وصل شوید</string>
+    <string name="copied">کپی شد</string>
+    <string name="result_detail">%1$s · پینگ %2$s میلی‌ثانیه · از دست رفتن %3$s%% · %4$s ثانیه</string>
+    <string name="notification_channel">تست سرورها</string>
+    <string name="notification_title">در حال تست %1$d از %2$d</string>
+    <string name="step_idle">آماده</string>
+    <string name="step_protocol">تنظیم پروتکل و پورت</string>
+    <string name="step_disconnect">قطع اتصال</string>
+    <string name="step_connect">در حال اتصال</string>
+    <string name="step_wait_user">این را در Windscribe وصل کنید</string>
+    <string name="step_wait_user_disconnect">تمام شد – برای تست بعدی Windscribe را قطع کنید</string>
+    <string name="step_ping">اندازه‌گیری پینگ</string>
+    <string name="step_done">تمام شد</string>
+    <string name="step_kept">یک مسیر سالم پیدا شد – اتصال برقرار می‌ماند</string>
+    <string name="step_error">خودکارسازی متوقف شد</string>
+</resources>
