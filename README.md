@@ -100,6 +100,24 @@ pyinstaller --noconsole --onefile --name AutoScribe --add-data "web;web" main.py
 
 Put `locations.json` in the same folder as `dist\AutoScribe.exe`.
 
+## Android app
+
+The `android/` folder has an Android version. Android has no Windscribe CLI, so the app works the
+official **Windscribe app** for you through an accessibility service: it picks each server, sets the
+protocol and port, connects, measures ping and packet loss through the tunnel and ranks the routes that work.
+
+- Download `AutoScribe-android.apk` from the **AutoScribe-android** artifact of the **Build AutoScribe** workflow run (Actions tab) or from a release, then install it.
+- Install Windscribe from Google Play, sign in and set its language to English.
+- Open AutoScribe, tap the status chip at the top and turn on the **AutoScribe** accessibility service.
+- Choose locations and protocols, then tap **Start**. Keep the screen on and unlocked while it runs.
+
+If the automation does not work with your Windscribe version, turn on **Assisted mode** in Settings: AutoScribe
+tells you which server and protocol to use, you connect in Windscribe, and it does the measuring. Please also send
+a screen dump (menu → **Dump Windscribe screen**) in an issue so the automation can be fixed.
+
+The APK is not on Google Play, because Google does not allow accessibility services to be used this way.
+To build it yourself: `cd android && ./gradlew assembleRelease` (needs JDK 17 and the Android SDK).
+
 ## Contributing
 
 Issues and pull requests are welcome. Fork the repository, make your change, and open a PR.
