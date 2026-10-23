@@ -10,7 +10,7 @@
     <string name="settings">Settings</string>
     <string name="export_csv">Export CSV</string>
     <string name="dump_screen">Dump Windscribe screen</string>
-    <string name="clear_results">Clear results</string>
+    <string name="clear_results">Clear all history</string>
     <string name="language">Language</string>
     <string name="language_system">System default</string>
     <string name="windscribe_missing">Windscribe is not installed. Install it from Google Play and sign in first.</string>
@@ -39,7 +39,7 @@
     <string name="assisted_mode">Assisted mode (I connect by hand)</string>
     <string name="assisted_hint">In assisted mode AutoScribe shows which server and protocol to use; you connect it in Windscribe and AutoScribe measures it, then you disconnect for the next one. Use it if automation does not work with your Windscribe version.</string>
     <string name="dump_hint">Windscribe opens now. Go to the screen that causes trouble; it is saved in 10 seconds.</string>
-    <string name="clear_confirm">Delete all test results?</string>
+    <string name="clear_confirm">Delete all tests and their results?</string>
     <string name="connect_manually">Connect in Windscribe to %1$s with %2$s</string>
     <string name="copied">Copied</string>
     <string name="notification_channel">Server tests</string>
@@ -81,4 +81,18 @@
     <string name="free_account">Free Windscribe account</string>
     <string name="free_account_hint">Skips Pro-only servers (marked ⭐ Pro), which free accounts cannot use.</string>
     <string name="crash_title">AutoScribe crashed last time. The error below was copied to the clipboard; please send it. Reopen the app to continue.</string>
+    <string name="history">Test history</string>
+    <string name="earlier_results">Earlier results</string>
+    <string name="session_line">%1$d of %2$d tested · %3$d working · best %4$s ms</string>
+    <string name="session_running">Running</string>
+    <string name="session_finished">Finished</string>
+    <string name="session_paused">Paused – %1$d left</string>
+    <string name="session_label">%1$s · %2$s</string>
+    <string name="resume">Resume</string>
+    <string name="resume_or_new">The test from %1$s stopped with %2$d tests left. Resume it or start a new test?</string>
+    <string name="new_test">New test</string>
+    <string name="open">Show results</string>
+    <string name="delete">Delete</string>
+    <string name="delete_confirm">Delete the test from %1$s and its results?</string>
+    <string name="no_history">No tests yet.</string>
 </resources>

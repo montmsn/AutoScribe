@@ -87,6 +87,7 @@ class MainActivity : AppCompatActivity() {
         toolbar.inflateMenu(R.menu.main)
         toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
+                R.id.action_history -> showHistory()
                 R.id.action_settings -> showSettings()
                 R.id.action_export -> exportCsv()
                 R.id.action_dump -> dumpScreen()
@@ -121,14 +122,14 @@ class MainActivity : AppCompatActivity() {
         header.findViewById<View>(R.id.cardLocations).setOnClickListener { showLocations() }
         header.findViewById<View>(R.id.cardProtocols).setOnClickListener { showProtocols() }
         header.findViewById<View>(R.id.btnConnectBest).setOnClickListener {
-            TestRunner.best(TestRunner.results.value).firstOrNull()?.let { connectToResult(it) }
+            TestRunner.best(TestRunner.resultsOf(TestRunner.current.value)).firstOrNull()?.let { connectToResult(it) }
         }
         btnStart.setOnClickListener { if (TestRunner.state.value.running) TestRunner.stop() else startTest() }
 
         tabs.addTab(tabs.newTab().setText(R.string.tab_best))
         tabs.addTab(tabs.newTab().setText(R.string.tab_results))
         tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab) = renderResults(TestRunner.results.value)
+            override fun onTabSelected(tab: TabLayout.Tab) = renderResults()
             override fun onTabUnselected(tab: TabLayout.Tab) {}
             override fun onTabReselected(tab: TabLayout.Tab) {}
         })
@@ -149,7 +150,8 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { TestRunner.state.collect { renderState(it) } }
-                launch { TestRunner.results.collect { renderResults(it) } }
+                launch { TestRunner.results.collect { renderResults() } }
+                launch { TestRunner.current.collect { renderResults(); renderState(TestRunner.state.value) } }
             }
         }
     }
@@ -177,7 +179,7 @@ class MainActivity : AppCompatActivity() {
         val usable = if (store.freeAccount) app.pops.filter { !it.premium } else app.pops
         val locations = if (selected.isEmpty()) usable.size else usable.count { it.key in selected }
         val routes = store.protocols.values.sumOf { it.size }
-        val pending = TestRunner.plan(store, app.pops).size
+        val pending = TestRunner.newSession(store, app.pops).second.size
         locationsValue.text = if (selected.isEmpty()) getString(R.string.locations_all, locations)
             else getString(R.string.locations_some, locations)
         protocolsValue.text = getString(R.string.protocols_value, store.protocols.size, routes)
@@ -199,7 +201,9 @@ class MainActivity : AppCompatActivity() {
         stepTarget.text = when {
             s.running -> s.target
             s.detail.isNotEmpty() -> s.detail
-            else -> getString(R.string.hero_hint)
+            else -> TestRunner.session(TestRunner.current.value)
+                ?.let { getString(R.string.session_label, sessionName(it), sessionStatus(it)) }
+                ?: getString(R.string.hero_hint)
         }
         renderPhases(s)
         if (!s.running) {
@@ -208,7 +212,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun renderResults(results: List<TestResult>) {
+    /** Shows the results of the selected session. */
+    private fun renderResults() {
+        val results = TestRunner.resultsOf(TestRunner.current.value)
         val best = TestRunner.best(results)
         val working = results.count { it.ok }
         statTested.text = results.size.toString()
@@ -242,17 +248,38 @@ class MainActivity : AppCompatActivity() {
                 .show()
             return
         }
-        val tasks = TestRunner.plan(store, app.pops)
+        // An interrupted session can be picked up where it stopped.
+        val last = TestRunner.session(TestRunner.current.value)
+        val left = last?.takeIf { !it.finished }?.let { TestRunner.remaining(it, app.pops) }.orEmpty()
+        if (last != null && left.isNotEmpty()) {
+            MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.resume)
+                .setMessage(getString(R.string.resume_or_new, sessionName(last), left.size))
+                .setPositiveButton(R.string.resume) { _, _ -> launchRun(last, left) }
+                .setNegativeButton(R.string.new_test) { _, _ -> startNew() }
+                .setNeutralButton(R.string.cancel, null)
+                .show()
+        } else {
+            startNew()
+        }
+    }
+
+    private fun startNew() {
+        val (session, tasks) = TestRunner.newSession(store, app.pops)
         if (tasks.isEmpty()) {
             Toast.makeText(this, R.string.nothing_to_test, Toast.LENGTH_LONG).show()
             return
         }
+        launchRun(session, tasks)
+    }
+
+    private fun launchRun(session: TestSession, tasks: List<Pair<Route, Pop>>) {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
         }
-        TestRunner.start(this, store, tasks)
+        TestRunner.start(this, store, session, tasks)
         ContextCompat.startForegroundService(this, Intent(this, TestService::class.java))
     }
 
@@ -439,7 +466,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun exportCsv() {
-        val file = store.exportCsv()
+        val file = store.exportCsv(TestRunner.current.value)
         val uri = FileProvider.getUriForFile(this, "$packageName.files", file)
         val send = Intent(Intent.ACTION_SEND).apply {
             type = "text/csv"
@@ -484,6 +511,103 @@ class MainActivity : AppCompatActivity() {
             setPadding(dp(16), dp(48), dp(16), dp(16))
         }
         setContentView(android.widget.ScrollView(this).apply { addView(text) })
+    }
+
+    private fun sessionName(s: TestSession): String =
+        if (s.id == TestSession.LEGACY) getString(R.string.earlier_results)
+        else java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
+            .format(java.util.Date(s.created))
+
+    private fun sessionStatus(s: TestSession): String {
+        val running = TestRunner.state.value.running && TestRunner.current.value == s.id
+        val left = TestRunner.remaining(s, app.pops).size
+        return when {
+            running -> getString(R.string.session_running)
+            s.finished || left == 0 -> getString(R.string.session_finished)
+            else -> getString(R.string.session_paused, left)
+        }
+    }
+
+    /** Every saved test run, newest first: open it, resume it, export it or delete it. */
+    private fun showHistory() {
+        val sessions = TestRunner.sessions.value
+        if (sessions.isEmpty()) {
+            Toast.makeText(this, R.string.no_history, Toast.LENGTH_LONG).show()
+            return
+        }
+        val column = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(8), dp(16), dp(8))
+        }
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.history)
+            .setView(android.widget.ScrollView(this).apply { addView(column) })
+            .setNegativeButton(R.string.cancel, null)
+            .create()
+        for (s in sessions) {
+            val results = TestRunner.resultsOf(s.id)
+            val best = TestRunner.best(results).firstOrNull()
+            val card = com.google.android.material.card.MaterialCardView(this).apply {
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    .apply { topMargin = dp(8) }
+                if (s.id == TestRunner.current.value) {
+                    strokeColor = ContextCompat.getColor(this@MainActivity, R.color.brand)
+                    strokeWidth = dp(2)
+                }
+                setOnClickListener { dialog.dismiss(); sessionActions(s) }
+            }
+            val body = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(14), dp(12), dp(14), dp(12))
+            }
+            body.addView(TextView(this).apply {
+                text = sessionName(s)
+                setTextAppearance(R.style.Value)
+            })
+            body.addView(TextView(this).apply {
+                text = getString(
+                    R.string.session_line, results.size, s.total, results.count { it.ok }, formatPing(best?.ping),
+                )
+                setTextAppearance(R.style.Label)
+            })
+            body.addView(TextView(this).apply {
+                text = sessionStatus(s)
+                textSize = 12f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setTextColor(ContextCompat.getColor(this@MainActivity, if (s.finished) R.color.good else R.color.warn))
+            })
+            card.addView(body)
+            column.addView(card)
+        }
+        dialog.show()
+    }
+
+    private fun sessionActions(s: TestSession) {
+        val running = TestRunner.state.value.running
+        val left = TestRunner.remaining(s, app.pops)
+        val actions = mutableListOf<Pair<Int, () -> Unit>>()
+        actions += R.string.open to { TestRunner.select(s.id) }
+        if (!running && !s.finished && left.isNotEmpty()) actions += R.string.resume to { launchRun(s, left) }
+        actions += R.string.export_csv to { TestRunner.select(s.id); exportCsv() }
+        if (!(running && TestRunner.current.value == s.id)) actions += R.string.delete to { confirmDelete(s) }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(sessionName(s))
+            .setItems(actions.map { getString(it.first) }.toTypedArray()) { _, i -> actions[i].second() }
+            .show()
+    }
+
+    private fun confirmDelete(s: TestSession) {
+        MaterialAlertDialogBuilder(this)
+            .setMessage(getString(R.string.delete_confirm, sessionName(s)))
+            .setPositiveButton(R.string.delete) { _, _ ->
+                lifecycleScope.launch {
+                    withContext(Dispatchers.IO) { TestRunner.delete(store, s.id) }
+                    renderResults()
+                    renderPlan()
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun confirmClear() {
