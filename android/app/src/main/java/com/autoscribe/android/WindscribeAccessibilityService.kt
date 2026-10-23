@@ -22,21 +22,26 @@ class AutomationException(message: String) : Exception(message)
  */
 class WindscribeAccessibilityService : AccessibilityService() {
 
+    /**
+     * Windscribe's Compose UI exposes its test tags as view ids (testTagsAsResourceId).
+     * These are the tags its own Maestro UI tests use, so they are the most stable handles we have.
+     */
     object Ui {
         const val PACKAGE = "com.windscribe.vpn"
-        val CONNECT_IDS = listOf("on_off_button", "connect_button", "btn_connect", "on_off_progress_bar")
-        val SEARCH_IDS = listOf("img_search", "search_icon", "iv_search", "search_button", "search")
-        val SEARCH_INPUT_IDS = listOf("search_src_text", "et_search", "search_input", "searchView")
-        val SEARCH_DESCRIPTIONS = listOf("Search")
-        val MENU_IDS = listOf("img_hamburger", "main_menu", "img_preferences", "preferences", "menu")
-        val MENU_DESCRIPTIONS = listOf("Preferences", "Menu", "Settings")
-        val CONNECTION_TEXTS = listOf("Connection")
-        val CONNECTION_MODE_TEXTS = listOf("Connection Mode")
+        const val VPN_DIALOGS = "com.android.vpndialogs"
+        val CONNECT_IDS = listOf("home_connect_button")
+        const val STATUS_CONNECTED = "connection_status_connected"
+        val SEARCH_IDS = listOf("search_open")
+        val SEARCH_INPUT_IDS = listOf("search_input")
+        val SEARCH_CLOSE_IDS = listOf("search_close")
+        val MENU_IDS = listOf("main_menu_button")
+        val CONNECTION_MENU_IDS = listOf("menu_item_connection")
+        const val DROPDOWN_ID = "dropdown_selector"
+        val POPUP_DISMISS_IDS = listOf("preferred_protocol_cancel", "battery_dont_ask_again")
+        val AUTO_TEXTS = listOf("Auto")
         val MANUAL_TEXTS = listOf("Manual")
-        val PROTOCOL_LABEL_IDS = listOf("protocol_text", "tv_protocol", "protocol")
-        val PORT_LABEL_IDS = listOf("port_text", "tv_port", "port")
-        val PROTOCOL_SPINNER_IDS = listOf("protocol_dropdown", "spinner_protocol", "protocol_spinner")
-        val PORT_SPINNER_IDS = listOf("port_dropdown", "spinner_port", "port_spinner")
+        const val PROTOCOL_TITLE = "Protocol"
+        const val PORT_TITLE = "Port"
     }
 
     override fun onServiceConnected() {
@@ -54,10 +59,13 @@ class WindscribeAccessibilityService : AccessibilityService() {
 
     // ----------------------------------------------------------------- node helpers
 
-    private fun roots(): List<AccessibilityNodeInfo> {
+    private fun allRoots(): List<AccessibilityNodeInfo> {
         val fromWindows = runCatching { windows.mapNotNull { it.root } }.getOrDefault(emptyList())
         return fromWindows.ifEmpty { listOfNotNull(rootInActiveWindow) }
     }
+
+    private fun roots(): List<AccessibilityNodeInfo> =
+        allRoots().filter { it.packageName?.toString() in setOf(Ui.PACKAGE, Ui.VPN_DIALOGS) }
 
     private fun allNodes(): List<AccessibilityNodeInfo> {
         val out = mutableListOf<AccessibilityNodeInfo>()
@@ -150,84 +158,123 @@ class WindscribeAccessibilityService : AccessibilityService() {
         clickOrFail("the connect button") { findById(Ui.CONNECT_IDS) }
     }
 
+    fun isConnectedOnScreen(): Boolean = findById(listOf(Ui.STATUS_CONNECTED)) != null
+
+    /** Closes the popups Windscribe (and Android's first-time VPN consent) may show while connecting. */
+    fun dismissPopups() {
+        findById(Ui.POPUP_DISMISS_IDS)?.let { click(it) }
+        allNodes().firstOrNull {
+            it.isVisibleToUser && it.label().equals("OK", true) &&
+                it.packageName?.toString() in setOf(Ui.PACKAGE, Ui.VPN_DIALOGS)
+        }?.let { click(it) }
+    }
+
     /** Searches the location list for [pop] and taps it; Windscribe connects on tap. */
     suspend fun connectTo(pop: Pop) {
         openMainScreen()
-        clickOrFail("the search button") { findById(Ui.SEARCH_IDS) ?: findByLabel(Ui.SEARCH_DESCRIPTIONS) }
+        clickOrFail("the search button") { findById(Ui.SEARCH_IDS) }
         val input = waitFor(4000) {
             findById(Ui.SEARCH_INPUT_IDS) ?: allNodes().firstOrNull { it.isEditable && it.isVisibleToUser }
         } ?: throw AutomationException("could not find the search field")
-        input.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+        click(input)
         val args = Bundle().apply {
             putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, pop.city)
         }
-        input.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
-        delay(800)
+        // The Compose text field is a descendant of the tagged node.
+        val editable = findEditable(input) ?: input
+        editable.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
+        delay(900)
 
-        val wanted = if (pop.nick.isNotEmpty()) listOf(pop.nick, pop.name) else listOf(pop.city)
-        var target = waitFor(2500) { findByLabel(wanted)?.takeIf { !it.isEditable } }
+        // Search rows read "<city> <nickname>", e.g. "Toronto Comfort Zone".
+        val rowText = listOf("${pop.city} ${pop.nick}".trim())
+        fun find() = allNodes().firstOrNull { n ->
+            val l = n.label() ?: return@firstOrNull false
+            n.isVisibleToUser && !n.isEditable &&
+                (rowText.any { l.equals(it, true) } || (pop.nick.isNotEmpty() && l.endsWith(pop.nick, true)))
+        }
+        var target = waitFor(2500) { find() }
         if (target == null) {
             // Results may be grouped under a collapsed country row.
             findByLabel(listOf(pop.country))?.let { click(it); delay(600) }
-            target = waitFor(2500) { findByLabel(wanted)?.takeIf { !it.isEditable } }
+            target = waitFor(2500) { find() }
         }
-        if (target == null) throw AutomationException("could not find ${pop.label} in Windscribe's list")
+        if (target == null) {
+            findById(Ui.SEARCH_CLOSE_IDS)?.let { click(it) }
+            throw AutomationException("could not find ${pop.label} in Windscribe's list")
+        }
         if (!click(target)) throw AutomationException("could not tap ${pop.label}")
     }
 
-    /**
-     * Selects protocol and port. Tries the protocol picker on the main screen first,
-     * then Preferences > Connection > Connection Mode: Manual.
-     */
+    private fun findEditable(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        if (node.isEditable) return node
+        for (i in 0 until node.childCount) findEditable(node.getChild(i) ?: continue)?.let { return it }
+        return null
+    }
+
+    /** The dropdown on the Connection screen whose row is titled [title] ("Protocol" or "Port"). */
+    private fun findDropdown(title: String): AccessibilityNodeInfo? =
+        allNodes().firstOrNull { n ->
+            n.isVisibleToUser && n.shortId() == Ui.DROPDOWN_ID && n.parent?.let { p ->
+                (0 until p.childCount).any { p.getChild(it)?.label().equals(title, true) }
+            } == true
+        }
+
+    private fun isInside(node: AccessibilityNodeInfo, id: String): Boolean {
+        var n: AccessibilityNodeInfo? = node
+        while (n != null) {
+            if (n.shortId() == id) return true
+            n = n.parent
+        }
+        return false
+    }
+
+    /** Taps the open dropdown menu item labelled [label] (not the dropdown's own current value). */
+    private suspend fun pickMenuItem(label: String) {
+        clickOrFail(label, 3000) {
+            allNodes().firstOrNull {
+                it.isVisibleToUser && it.label().equals(label, true) && !isInside(it, Ui.DROPDOWN_ID)
+            }
+        }
+    }
+
+    /** Preferences > Connection > Connection Mode: Manual, then the protocol and port dropdowns. */
     suspend fun setRoute(route: Route) {
         val name = Protocols.displayName(route.protocol)
         openMainScreen()
-        val label = findById(Ui.PROTOCOL_LABEL_IDS)
-        if (label != null && click(label)) {
-            val item = waitFor(3000) { findByLabel(listOf(name)) }
-            if (item != null && click(item)) {
-                delay(600)
-                pickPort(route.port)
-                return
-            }
-            performGlobalAction(GLOBAL_ACTION_BACK)
+        clickOrFail("the Windscribe menu") { findById(Ui.MENU_IDS) }
+        clickOrFail("Connection settings") { findById(Ui.CONNECTION_MENU_IDS) }
+
+        if (waitFor(2000) { findDropdown(Ui.PROTOCOL_TITLE) } == null) {
+            clickOrFail("the connection mode selector") { findByLabel(Ui.AUTO_TEXTS) }
+            pickMenuItem(Ui.MANUAL_TEXTS.first())
+        }
+        val proto = waitFor(3000) { findDropdown(Ui.PROTOCOL_TITLE) }
+            ?: throw AutomationException("could not find the protocol selector")
+        if (!proto.hasLabelInside(name)) {
+            click(proto)
+            pickMenuItem(name)
             delay(500)
         }
-        setRouteInPreferences(name, route.port)
-    }
-
-    private suspend fun pickPort(port: Int) {
-        val portText = port.toString()
-        if (findByLabel(listOf(portText)) != null && findById(Ui.PORT_SPINNER_IDS) == null) {
-            findByLabel(listOf(portText))?.let { click(it) }
-            delay(400)
-            return
-        }
-        val spinner = findById(Ui.PORT_SPINNER_IDS) ?: findById(Ui.PORT_LABEL_IDS) ?: return
-        click(spinner)
-        clickOrFail("port $portText", 3000) { findByLabel(listOf(portText)) }
-    }
-
-    private suspend fun setRouteInPreferences(protocolName: String, port: Int) {
-        openMainScreen()
-        clickOrFail("the Windscribe menu") { findById(Ui.MENU_IDS) ?: findByLabel(Ui.MENU_DESCRIPTIONS) }
-        clickOrFail("Connection settings") { findByLabel(Ui.CONNECTION_TEXTS) }
-        val mode = waitFor(3000) { findByLabel(Ui.CONNECTION_MODE_TEXTS) }
-        if (mode != null && findByLabel(Ui.MANUAL_TEXTS) == null) {
-            click(mode)
-            clickOrFail("Manual mode", 3000) { findByLabel(Ui.MANUAL_TEXTS) }
-        } else {
-            findByLabel(Ui.MANUAL_TEXTS)?.let { click(it); delay(400) }
-        }
-        val protoSpinner = waitFor(3000) { findById(Ui.PROTOCOL_SPINNER_IDS) }
-            ?: throw AutomationException("could not find the protocol selector")
-        click(protoSpinner)
-        clickOrFail(protocolName, 3000) { findByLabel(listOf(protocolName)) }
-        val portSpinner = waitFor(3000) { findById(Ui.PORT_SPINNER_IDS) }
+        val port = waitFor(3000) { findDropdown(Ui.PORT_TITLE) }
             ?: throw AutomationException("could not find the port selector")
-        click(portSpinner)
-        clickOrFail("port $port", 3000) { findByLabel(listOf(port.toString())) }
+        if (!port.hasLabelInside(route.port.toString())) {
+            click(port)
+            delay(400)
+            try {
+                pickMenuItem(route.port.toString())
+            } catch (e: AutomationException) {
+                performGlobalAction(GLOBAL_ACTION_BACK)
+                throw AutomationException("Windscribe does not offer port ${route.port} for $name")
+            }
+        }
+        delay(400)
         openMainScreen()
+    }
+
+    private fun AccessibilityNodeInfo.hasLabelInside(text: String): Boolean {
+        if (label().equals(text, true)) return true
+        for (i in 0 until childCount) if (getChild(i)?.hasLabelInside(text) == true) return true
+        return false
     }
 
     /** Writes the view tree of what is on screen now, for fixing [Ui] after a Windscribe update. */
@@ -243,7 +290,7 @@ class WindscribeAccessibilityService : AccessibilityService() {
                 .append(" bounds=").append(r.toShortString()).append('\n')
             for (i in 0 until n.childCount) walk(n.getChild(i), depth + 1)
         }
-        roots().forEach { sb.append("=== window ").append(it.packageName).append('\n'); walk(it, 0) }
+        allRoots().forEach { sb.append("=== window ").append(it.packageName).append('\n'); walk(it, 0) }
         file.writeText(sb.toString())
     }
 

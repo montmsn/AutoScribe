@@ -104,7 +104,8 @@ object TestRunner {
         val end = System.currentTimeMillis() + timeoutMs
         while (System.currentTimeMillis() < end) {
             if (Vpn.isUp(context) == up) return true
-            delay(250)
+            WindscribeAccessibilityService.instance?.let { s -> withContext(Dispatchers.Main) { s.dismissPopups() } }
+            delay(400)
         }
         return Vpn.isUp(context) == up
     }
