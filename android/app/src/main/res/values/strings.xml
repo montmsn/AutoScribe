@@ -80,4 +80,5 @@
     <string name="keep_screen_on_hint">The phone will not lock while testing. If you lock it yourself, the test pauses and continues after you unlock.</string>
     <string name="free_account">Free Windscribe account</string>
     <string name="free_account_hint">Skips Pro-only servers (marked ⭐ Pro), which free accounts cannot use.</string>
+    <string name="crash_title">AutoScribe crashed last time. The error below was copied to the clipboard; please send it. Reopen the app to continue.</string>
 </resources>

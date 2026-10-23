@@ -90,6 +90,13 @@ jobs:
       - name: Build APK
         run: ./gradlew --no-daemon assembleRelease
 
+      - name: Launch test
+        run: ./gradlew --no-daemon testReleaseUnitTest
+
+      - name: Show test failures
+        if: failure()
+        run: cat app/build/test-results/testReleaseUnitTest/*.xml || true
+
       - name: Copy APK
         run: cp app/build/outputs/apk/release/app-release.apk ../AutoScribe-android.apk
 

@@ -79,4 +79,5 @@
     <string name="keep_screen_on_hint">تا پایان تست گوشی قفل نمی‌شود. اگر خودتان قفلش کنید، تست مکث می‌کند و بعد از باز کردن قفل ادامه می‌دهد.</string>
     <string name="free_account">حساب رایگان Windscribe</string>
     <string name="free_account_hint">سرورهای مخصوص Pro (با علامت ⭐ Pro) را که حساب رایگان به آن‌ها دسترسی ندارد رد می‌کند.</string>
+    <string name="crash_title">AutoScribe دفعهٔ قبل بسته شد. متن خطای زیر کپی شد؛ لطفاً آن را بفرستید. برای ادامه، اپ را دوباره باز کنید.</string>
 </resources>

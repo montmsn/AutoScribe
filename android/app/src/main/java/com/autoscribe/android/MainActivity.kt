@@ -73,6 +73,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // After a crash, show the error on its own screen once, so it can be read even if the
+        // normal screen crashes again. The next launch opens normally.
+        app.takeCrash()?.let { showCrash(it); return }
         setContentView(R.layout.activity_main)
         val list = findViewById<RecyclerView>(R.id.list)
         // The header scrolls with the results, so the whole screen is one list.
@@ -469,6 +472,17 @@ class MainActivity : AppCompatActivity() {
             }
             startActivity(Intent.createChooser(send, getString(R.string.dump_screen)))
         }
+    }
+
+    private fun showCrash(trace: String) {
+        getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("crash", trace))
+        val text = TextView(this).apply {
+            text = getString(R.string.crash_title) + "\n\n" + trace
+            setTextIsSelectable(true)
+            textSize = 12f
+            setPadding(dp(16), dp(48), dp(16), dp(16))
+        }
+        setContentView(android.widget.ScrollView(this).apply { addView(text) })
     }
 
     private fun confirmClear() {

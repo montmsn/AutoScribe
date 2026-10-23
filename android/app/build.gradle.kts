@@ -30,6 +30,9 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
 
     // Share the desktop server list instead of keeping a second copy.
     sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/sharedAssets"))
@@ -48,4 +51,7 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.14.1")
 }
