@@ -16,10 +16,6 @@
     <string name="assisted_on">Ручной режим: вы подключаете Windscribe, AutoScribe измеряет.</string>
     <string name="service_on">✅ Служба автоматизации включена</string>
     <string name="service_off">⚠️ Служба автоматизации выключена – нажмите, чтобы включить</string>
-    <string name="plan_summary">%1$d локаций × %2$d маршрутов = %3$d тестов (%4$d ещё не проверено)</string>
-    <string name="step_line">[%1$d/%2$d] %3$s\n%4$s</string>
-    <string name="best_route">Лучший: %1$s · %2$s · %3$s мс</string>
-    <string name="no_best">Рабочих маршрутов пока нет</string>
     <string name="tab_best">Лучшие маршруты</string>
     <string name="tab_results">Все результаты</string>
     <string name="need_service">Включите службу специальных возможностей AutoScribe, чтобы она могла управлять Windscribe. Или включите ручной режим в настройках.</string>
@@ -45,7 +41,6 @@
     <string name="clear_confirm">Удалить все результаты?</string>
     <string name="connect_manually">Подключитесь в Windscribe к %1$s через %2$s</string>
     <string name="copied">Скопировано</string>
-    <string name="result_detail">%1$s · пинг %2$s мс · потери %3$s%% · %4$s с</string>
     <string name="notification_channel">Проверка серверов</string>
     <string name="notification_title">Тест %1$d из %2$d</string>
     <string name="step_idle">Готово к работе</string>
@@ -58,4 +53,17 @@
     <string name="step_done">Завершено</string>
     <string name="step_kept">Найден рабочий маршрут – подключение сохранено</string>
     <string name="step_error">Автоматизация остановлена</string>
+    <string name="best_label">ЛУЧШИЙ МАРШРУТ</string>
+    <string name="best_detail">%1$s · %2$s мс</string>
+    <string name="connect">Подключить</string>
+    <string name="empty_results">Результатов пока нет. Выберите локации и протоколы и нажмите «Старт».</string>
+    <string name="locations_all">Все · %1$d серверов</string>
+    <string name="locations_some">%1$d серверов</string>
+    <string name="protocols_value">%1$d протоколов · %2$d портов</string>
+    <string name="plan_summary">Всего тестов: %1$d · осталось: %2$d</string>
+    <string name="ring_count">%1$d\n/%2$d</string>
+    <string name="hero_hint">Находит серверы Windscribe, которые работают в вашей сети</string>
+    <string name="result_detail">%1$s · потери %2$s%% · %3$s с</string>
+    <string name="ms">%1$s мс</string>
+    <string name="failed">Ошибка</string>
 </resources>

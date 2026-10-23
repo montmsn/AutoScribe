@@ -17,10 +17,6 @@
     <string name="assisted_on">Assisted mode: you connect Windscribe, AutoScribe measures.</string>
     <string name="service_on">✅ Automation service is on</string>
     <string name="service_off">⚠️ Automation service is off – tap to turn it on</string>
-    <string name="plan_summary">%1$d locations × %2$d routes = %3$d tests (%4$d not tested yet)</string>
-    <string name="step_line">[%1$d/%2$d] %3$s\n%4$s</string>
-    <string name="best_route">Best: %1$s · %2$s · %3$s ms</string>
-    <string name="no_best">No working route yet</string>
     <string name="tab_best">Best routes</string>
     <string name="tab_results">All results</string>
     <string name="need_service">Turn on the AutoScribe accessibility service so it can operate the Windscribe app. Or switch on assisted mode in Settings.</string>
@@ -46,7 +42,6 @@
     <string name="clear_confirm">Delete all test results?</string>
     <string name="connect_manually">Connect in Windscribe to %1$s with %2$s</string>
     <string name="copied">Copied</string>
-    <string name="result_detail">%1$s · ping %2$s ms · loss %3$s%% · %4$s s</string>
     <string name="notification_channel">Server tests</string>
     <string name="notification_title">Testing %1$d of %2$d</string>
     <string name="step_idle">Ready</string>
@@ -59,4 +54,17 @@
     <string name="step_done">Finished</string>
     <string name="step_kept">Found a working route – staying connected</string>
     <string name="step_error">Automation stopped</string>
+    <string name="best_label">BEST ROUTE</string>
+    <string name="best_detail">%1$s · %2$s ms</string>
+    <string name="connect">Connect</string>
+    <string name="empty_results">No results yet. Pick locations and protocols, then tap Start.</string>
+    <string name="locations_all">All · %1$d servers</string>
+    <string name="locations_some">%1$d servers</string>
+    <string name="protocols_value">%1$d protocols · %2$d ports</string>
+    <string name="plan_summary">%1$d tests in total · %2$d still to test</string>
+    <string name="ring_count">%1$d\n/%2$d</string>
+    <string name="hero_hint">Finds the Windscribe servers that work on your network</string>
+    <string name="result_detail">%1$s · loss %2$s%% · %3$s s</string>
+    <string name="ms">%1$s ms</string>
+    <string name="failed">Failed</string>
 </resources>

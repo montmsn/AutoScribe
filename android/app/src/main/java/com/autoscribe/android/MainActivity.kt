@@ -27,6 +27,8 @@ import androidx.appcompat.widget.SwitchCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.os.LocaleListCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -35,7 +37,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.progressindicator.LinearProgressIndicator
+import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -50,9 +52,16 @@ class MainActivity : AppCompatActivity() {
     private lateinit var serviceStatus: TextView
     private lateinit var planSummary: TextView
     private lateinit var btnStart: MaterialButton
-    private lateinit var currentStep: TextView
-    private lateinit var progress: LinearProgressIndicator
-    private lateinit var bestRoute: TextView
+    private lateinit var stepTitle: TextView
+    private lateinit var stepTarget: TextView
+    private lateinit var ring: CircularProgressIndicator
+    private lateinit var ringText: TextView
+    private lateinit var locationsValue: TextView
+    private lateinit var protocolsValue: TextView
+    private lateinit var bestCard: View
+    private lateinit var bestTitle: TextView
+    private lateinit var bestSubtitle: TextView
+    private lateinit var empty: TextView
     private lateinit var tabs: TabLayout
     private val adapter = ResultAdapter()
 
@@ -76,14 +85,24 @@ class MainActivity : AppCompatActivity() {
         serviceStatus = findViewById(R.id.serviceStatus)
         planSummary = findViewById(R.id.planSummary)
         btnStart = findViewById(R.id.btnStart)
-        currentStep = findViewById(R.id.currentStep)
-        progress = findViewById(R.id.progress)
-        bestRoute = findViewById(R.id.bestRoute)
+        stepTitle = findViewById(R.id.stepTitle)
+        stepTarget = findViewById(R.id.stepTarget)
+        ring = findViewById(R.id.ring)
+        ringText = findViewById(R.id.ringText)
+        locationsValue = findViewById(R.id.locationsValue)
+        protocolsValue = findViewById(R.id.protocolsValue)
+        bestCard = findViewById(R.id.bestCard)
+        bestTitle = findViewById(R.id.bestTitle)
+        bestSubtitle = findViewById(R.id.bestSubtitle)
+        empty = findViewById(R.id.empty)
         tabs = findViewById(R.id.tabs)
 
         serviceStatus.setOnClickListener { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
-        findViewById<Button>(R.id.btnLocations).setOnClickListener { showLocations() }
-        findViewById<Button>(R.id.btnProtocols).setOnClickListener { showProtocols() }
+        findViewById<View>(R.id.cardLocations).setOnClickListener { showLocations() }
+        findViewById<View>(R.id.cardProtocols).setOnClickListener { showProtocols() }
+        findViewById<View>(R.id.btnConnectBest).setOnClickListener {
+            TestRunner.best(TestRunner.results.value).firstOrNull()?.let { connectToResult(it) }
+        }
         btnStart.setOnClickListener { if (TestRunner.state.value.running) TestRunner.stop() else startTest() }
 
         tabs.addTab(tabs.newTab().setText(R.string.tab_best))
@@ -97,6 +116,13 @@ class MainActivity : AppCompatActivity() {
         val list = findViewById<RecyclerView>(R.id.list)
         list.layoutManager = LinearLayoutManager(this)
         list.adapter = adapter
+        // targetSdk 35 draws edge to edge: keep the last card above the navigation bar.
+        val basePadding = list.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(list) { v, insets ->
+            val bottom = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
+            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, basePadding + bottom)
+            insets
+        }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -129,19 +155,28 @@ class MainActivity : AppCompatActivity() {
         val locations = if (selected.isEmpty()) app.pops.size else app.pops.count { it.key in selected }
         val routes = store.protocols.values.sumOf { it.size }
         val pending = TestRunner.plan(store, app.pops).size
-        planSummary.text = getString(R.string.plan_summary, locations, routes, locations * routes, pending)
+        locationsValue.text = if (selected.isEmpty()) getString(R.string.locations_all, locations)
+            else getString(R.string.locations_some, locations)
+        protocolsValue.text = getString(R.string.protocols_value, store.protocols.size, routes)
+        planSummary.text = getString(R.string.plan_summary, locations * routes, pending)
     }
 
     private fun renderState(s: RunState) {
         btnStart.setText(if (s.running) R.string.stop else R.string.start)
-        progress.max = maxOf(1, s.total)
-        progress.progress = s.index
-        progress.visibility = if (s.running) View.VISIBLE else View.INVISIBLE
-        val step = getString(s.step.res)
-        currentStep.text = when {
-            s.running -> getString(R.string.step_line, s.index, s.total, step, s.target)
-            s.detail.isNotEmpty() -> "$step: ${s.detail}"
-            else -> step
+        btnStart.setIconResource(if (s.running) R.drawable.ic_stop else R.drawable.ic_play)
+        ring.max = maxOf(1, s.total)
+        ring.setProgressCompat(if (s.total == 0) 0 else s.index, true)
+        ring.isIndeterminate = false
+        ringText.text = when {
+            s.running -> getString(R.string.ring_count, s.index, s.total)
+            s.total > 0 && s.step == Step.DONE -> "✓"
+            else -> "—"
+        }
+        stepTitle.text = getString(s.step.res)
+        stepTarget.text = when {
+            s.running -> s.target
+            s.detail.isNotEmpty() -> s.detail
+            else -> getString(R.string.hero_hint)
         }
         if (!s.running) {
             renderService()
@@ -151,10 +186,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun renderResults(results: List<TestResult>) {
         val best = TestRunner.best(results)
-        bestRoute.text = best.firstOrNull()?.let {
-            getString(R.string.best_route, it.label, it.route.label, formatPing(it.ping))
-        } ?: getString(R.string.no_best)
-        adapter.submit(if (tabs.selectedTabPosition == 1) results.asReversed() else best)
+        val top = best.firstOrNull()
+        bestCard.visibility = if (top == null) View.GONE else View.VISIBLE
+        if (top != null) {
+            bestTitle.text = "${top.label} · ${top.route.label}"
+            bestSubtitle.text = getString(R.string.best_detail, top.country, formatPing(top.ping))
+        }
+        val shown = if (tabs.selectedTabPosition == 1) results.asReversed() else best
+        adapter.submit(shown, ranked = tabs.selectedTabPosition != 1)
+        empty.visibility = if (shown.isEmpty()) View.VISIBLE else View.GONE
     }
 
     private fun formatPing(v: Double?) = v?.let { "%.0f".format(it) } ?: "-"
@@ -453,14 +493,19 @@ class MainActivity : AppCompatActivity() {
     private inner class ResultAdapter : RecyclerView.Adapter<ResultAdapter.Holder>() {
         private var items: List<TestResult> = emptyList()
 
+        private var ranked = true
+
         inner class Holder(v: View) : RecyclerView.ViewHolder(v) {
+            val rank: TextView = v.findViewById(R.id.rank)
             val title: TextView = v.findViewById(R.id.title)
             val subtitle: TextView = v.findViewById(R.id.subtitle)
+            val badge: TextView = v.findViewById(R.id.badge)
         }
 
         @android.annotation.SuppressLint("NotifyDataSetChanged")
-        fun submit(list: List<TestResult>) {
+        fun submit(list: List<TestResult>, ranked: Boolean) {
             items = list
+            this.ranked = ranked
             notifyDataSetChanged()
         }
 
@@ -471,11 +516,22 @@ class MainActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(h: Holder, position: Int) {
             val r = items[position]
-            h.title.text = "${if (r.ok) "✅" else "❌"} ${r.label} · ${r.route.label}"
+            h.rank.text = if (ranked) (position + 1).toString() else if (r.ok) "✓" else "✕"
+            h.title.text = "${r.label} · ${r.route.label}"
             h.subtitle.text = getString(
-                R.string.result_detail, r.country, formatPing(r.ping),
+                R.string.result_detail, r.country,
                 r.loss?.let { "%.0f".format(it) } ?: "-", "%.1f".format(r.duration),
             )
+            // Green under 120 ms, amber under 250 ms, red above or when the route failed.
+            val (fg, bg) = when {
+                !r.ok || r.ping == null -> R.color.bad to R.color.bad_bg
+                r.ping < 120 -> R.color.good to R.color.good_bg
+                r.ping < 250 -> R.color.warn to R.color.warn_bg
+                else -> R.color.bad to R.color.bad_bg
+            }
+            h.badge.text = if (r.ok) getString(R.string.ms, formatPing(r.ping)) else getString(R.string.failed)
+            h.badge.setTextColor(ContextCompat.getColor(this@MainActivity, fg))
+            h.badge.background.mutate().setTint(ContextCompat.getColor(this@MainActivity, bg))
             h.itemView.setOnClickListener { if (r.ok) connectToResult(r) }
             h.itemView.setOnLongClickListener { copyResult(r); true }
         }

@@ -16,10 +16,6 @@
     <string name="assisted_on">حالت دستی: شما Windscribe را وصل می‌کنید و AutoScribe اندازه می‌گیرد.</string>
     <string name="service_on">✅ سرویس خودکارسازی روشن است</string>
     <string name="service_off">⚠️ سرویس خودکارسازی خاموش است – برای روشن کردن بزنید</string>
-    <string name="plan_summary">%1$d مکان × %2$d مسیر = %3$d تست (%4$d هنوز تست نشده)</string>
-    <string name="step_line">[%1$d/%2$d] %3$s\n%4$s</string>
-    <string name="best_route">بهترین: %1$s · %2$s · %3$s میلی‌ثانیه</string>
-    <string name="no_best">هنوز مسیر سالمی پیدا نشده</string>
     <string name="tab_best">بهترین مسیرها</string>
     <string name="tab_results">همهٔ نتایج</string>
     <string name="need_service">سرویس دسترسی‌پذیری AutoScribe را روشن کنید تا بتواند برنامهٔ Windscribe را کار کند. یا در تنظیمات، حالت دستی را روشن کنید.</string>
@@ -45,7 +41,6 @@
     <string name="clear_confirm">همهٔ نتایج تست پاک شوند؟</string>
     <string name="connect_manually">در Windscribe به %1$s با %2$s وصل شوید</string>
     <string name="copied">کپی شد</string>
-    <string name="result_detail">%1$s · پینگ %2$s میلی‌ثانیه · از دست رفتن %3$s%% · %4$s ثانیه</string>
     <string name="notification_channel">تست سرورها</string>
     <string name="notification_title">در حال تست %1$d از %2$d</string>
     <string name="step_idle">آماده</string>
@@ -58,4 +53,17 @@
     <string name="step_done">تمام شد</string>
     <string name="step_kept">یک مسیر سالم پیدا شد – اتصال برقرار می‌ماند</string>
     <string name="step_error">خودکارسازی متوقف شد</string>
+    <string name="best_label">بهترین مسیر</string>
+    <string name="best_detail">%1$s · %2$s میلی‌ثانیه</string>
+    <string name="connect">اتصال</string>
+    <string name="empty_results">هنوز نتیجه‌ای نیست. مکان‌ها و پروتکل‌ها را انتخاب کنید و «شروع» را بزنید.</string>
+    <string name="locations_all">همه · %1$d سرور</string>
+    <string name="locations_some">%1$d سرور</string>
+    <string name="protocols_value">%1$d پروتکل · %2$d پورت</string>
+    <string name="plan_summary">در مجموع %1$d تست · %2$d تست باقی‌مانده</string>
+    <string name="ring_count">%1$d\n/%2$d</string>
+    <string name="hero_hint">سرورهای Windscribe را که روی شبکهٔ شما کار می‌کنند پیدا می‌کند</string>
+    <string name="result_detail">%1$s · از دست رفتن %2$s%% · %3$s ثانیه</string>
+    <string name="ms">%1$s ms</string>
+    <string name="failed">ناموفق</string>
 </resources>
