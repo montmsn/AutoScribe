@@ -9,7 +9,7 @@
     <string name="settings">Настройки</string>
     <string name="export_csv">Экспорт CSV</string>
     <string name="dump_screen">Сохранить экран Windscribe</string>
-    <string name="clear_results">Очистить результаты</string>
+    <string name="clear_results">Очистить всю историю</string>
     <string name="language">Язык</string>
     <string name="language_system">Как в системе</string>
     <string name="windscribe_missing">Windscribe не установлен. Сначала установите его из Google Play и войдите.</string>
@@ -80,4 +80,18 @@
     <string name="free_account">Бесплатный аккаунт Windscribe</string>
     <string name="free_account_hint">Пропускает серверы только для Pro (⭐ Pro), недоступные бесплатным аккаунтам.</string>
     <string name="crash_title">AutoScribe аварийно завершился. Текст ошибки ниже скопирован; пришлите его, пожалуйста. Откройте приложение снова, чтобы продолжить.</string>
+    <string name="history">История тестов</string>
+    <string name="earlier_results">Прежние результаты</string>
+    <string name="session_line">Проверено %1$d из %2$d · рабочих %3$d · лучший %4$s мс</string>
+    <string name="session_running">Выполняется</string>
+    <string name="session_finished">Завершён</string>
+    <string name="session_paused">Прерван – осталось %1$d</string>
+    <string name="session_label">%1$s · %2$s</string>
+    <string name="resume">Продолжить</string>
+    <string name="resume_or_new">Тест от %1$s остановлен, осталось %2$d. Продолжить его или начать новый?</string>
+    <string name="new_test">Новый тест</string>
+    <string name="open">Показать результаты</string>
+    <string name="delete">Удалить</string>
+    <string name="delete_confirm">Удалить тест от %1$s и его результаты?</string>
+    <string name="no_history">Тестов пока нет.</string>
 </resources>

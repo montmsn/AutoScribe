@@ -9,6 +9,7 @@ import java.io.File
 class Store(private val context: Context) {
     private val prefs = context.getSharedPreferences("autoscribe", Context.MODE_PRIVATE)
     private val resultsFile = File(context.filesDir, "results.jsonl")
+    private val sessionsFile = File(context.filesDir, "sessions.json")
 
     var selectedPops: Set<String>
         get() = prefs.getStringSet("pops", emptySet()) ?: emptySet()
@@ -75,6 +76,7 @@ class Store(private val context: Context) {
             runCatching {
                 val o = JSONObject(line)
                 TestResult(
+                    session = o.optString("session", TestSession.LEGACY),
                     popKey = o.getString("key"),
                     label = o.getString("label"),
                     country = o.getString("country"),
@@ -93,6 +95,7 @@ class Store(private val context: Context) {
     @Synchronized
     fun append(r: TestResult) {
         val o = JSONObject()
+            .put("session", r.session)
             .put("key", r.popKey).put("label", r.label).put("country", r.country)
             .put("protocol", r.protocol).put("port", r.port).put("status", r.status)
             .put("duration", r.duration).put("ping", r.ping ?: JSONObject.NULL)
@@ -103,14 +106,79 @@ class Store(private val context: Context) {
     @Synchronized
     fun clearResults() {
         resultsFile.delete()
+        sessionsFile.delete()
     }
 
-    fun exportCsv(): File {
+    @Synchronized
+    fun loadSessions(): List<TestSession> {
+        val out = mutableListOf<TestSession>()
+        if (sessionsFile.exists()) {
+            runCatching {
+                val arr = JSONArray(sessionsFile.readText())
+                for (i in 0 until arr.length()) {
+                    val o = arr.getJSONObject(i)
+                    val pops = o.getJSONArray("pops")
+                    out += TestSession(
+                        id = o.getString("id"),
+                        created = o.getLong("created"),
+                        pops = (0 until pops.length()).map { pops.getString(it) },
+                        protocols = protocolsFromJson(o.getJSONArray("protocols")),
+                        finished = o.optBoolean("finished", false),
+                    )
+                }
+            }
+        }
+        return out
+    }
+
+    @Synchronized
+    fun saveSession(session: TestSession) {
+        val all = loadSessions().filter { it.id != session.id } + session
+        val arr = JSONArray()
+        for (s in all) {
+            arr.put(
+                JSONObject().put("id", s.id).put("created", s.created)
+                    .put("pops", JSONArray(s.pops)).put("protocols", protocolsToJson(s.protocols))
+                    .put("finished", s.finished)
+            )
+        }
+        sessionsFile.writeText(arr.toString())
+    }
+
+    /** Removes a session and its results. */
+    @Synchronized
+    fun deleteSession(id: String) {
+        val keep = loadResults().filter { it.session != id }
+        resultsFile.delete()
+        keep.forEach { append(it) }
+        val sessions = loadSessions().filter { it.id != id }
+        sessionsFile.delete()
+        sessions.forEach { saveSession(it) }
+    }
+
+    private fun protocolsToJson(v: Map<String, List<Int>>): JSONArray {
+        val arr = JSONArray()
+        v.forEach { (id, ports) -> arr.put(JSONObject().put("id", id).put("ports", JSONArray(ports))) }
+        return arr
+    }
+
+    private fun protocolsFromJson(arr: JSONArray): LinkedHashMap<String, List<Int>> {
+        val out = LinkedHashMap<String, List<Int>>()
+        for (i in 0 until arr.length()) {
+            val o = arr.getJSONObject(i)
+            val ports = o.getJSONArray("ports")
+            out[o.getString("id")] = (0 until ports.length()).map { ports.getInt(it) }
+        }
+        return out
+    }
+
+    /** CSV of one session's results, or of everything when [session] is null. */
+    fun exportCsv(session: String? = null): File {
         val dir = File(context.cacheDir, "exports").apply { mkdirs() }
         val file = File(dir, "autoscribe_${System.currentTimeMillis()}.csv")
         file.bufferedWriter().use { w ->
             w.write("location,country,protocol,port,status,duration,ping,packet_loss,timestamp\n")
-            for (r in loadResults()) {
+            for (r in loadResults().filter { session == null || it.session == session }) {
                 val cells = listOf(
                     r.label, r.country, Protocols.displayName(r.protocol), r.port.toString(), r.status,
                     "%.2f".format(java.util.Locale.US, r.duration), r.ping?.let { "%.1f".format(java.util.Locale.US, it) } ?: "",

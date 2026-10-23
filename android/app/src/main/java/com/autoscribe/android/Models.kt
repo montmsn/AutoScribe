@@ -18,7 +18,27 @@ data class Route(val protocol: String, val port: Int) {
     val label: String get() = "${Protocols.displayName(protocol)} $port"
 }
 
+/**
+ * One test run: the servers and routes it was asked to cover. Its results carry its [id],
+ * so an interrupted run can be resumed with only what it has not tested yet.
+ */
+data class TestSession(
+    val id: String,
+    val created: Long,
+    val pops: List<String>,
+    val protocols: LinkedHashMap<String, List<Int>>,
+    val finished: Boolean = false,
+) {
+    val total: Int get() = pops.size * protocols.values.sumOf { it.size }
+
+    companion object {
+        /** Results saved before sessions existed are grouped under this id. */
+        const val LEGACY = "legacy"
+    }
+}
+
 data class TestResult(
+    val session: String,
     val popKey: String,
     val label: String,
     val country: String,

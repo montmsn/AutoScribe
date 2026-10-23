@@ -51,13 +51,81 @@ object TestRunner {
     private val _results = MutableStateFlow<List<TestResult>>(emptyList())
     val results: StateFlow<List<TestResult>> = _results
 
+    private val _sessions = MutableStateFlow<List<TestSession>>(emptyList())
+    /** All sessions, newest first. */
+    val sessions: StateFlow<List<TestSession>> = _sessions
+
+    /** The session shown on the main screen. */
+    private val _current = MutableStateFlow<String?>(null)
+    val current: StateFlow<String?> = _current
+
     fun loadResults(store: Store) {
-        _results.value = store.loadResults()
+        val results = store.loadResults()
+        val sessions = store.loadSessions().toMutableList()
+        // Results saved before sessions existed become one finished "earlier results" session.
+        val legacy = results.filter { it.session == TestSession.LEGACY }
+        if (legacy.isNotEmpty() && sessions.none { it.id == TestSession.LEGACY }) {
+            val protocols = LinkedHashMap<String, List<Int>>()
+            legacy.groupBy { it.protocol }.forEach { (p, rs) -> protocols[p] = rs.map { it.port }.distinct() }
+            val s = TestSession(
+                TestSession.LEGACY, legacy.minOf { it.time }, legacy.map { it.popKey }.distinct(), protocols, finished = true,
+            )
+            store.saveSession(s)
+            sessions += s
+        }
+        _results.value = results
+        _sessions.value = sessions.sortedByDescending { it.created }
+        if (_current.value == null || _sessions.value.none { it.id == _current.value }) {
+            _current.value = _sessions.value.firstOrNull()?.id
+        }
     }
 
     fun clear(store: Store) {
         store.clearResults()
         _results.value = emptyList()
+        _sessions.value = emptyList()
+        _current.value = null
+    }
+
+    fun select(id: String) {
+        _current.value = id
+    }
+
+    fun delete(store: Store, id: String) {
+        if (job?.isActive == true && _current.value == id) return
+        store.deleteSession(id)
+        _current.value = null
+        loadResults(store)
+    }
+
+    fun session(id: String?): TestSession? = _sessions.value.firstOrNull { it.id == id }
+
+    fun resultsOf(id: String?): List<TestResult> = _results.value.filter { it.session == id }
+
+    /** A new session for the current selection; servers already tested anywhere are skipped if set. */
+    fun newSession(store: Store, pops: List<Pop>): Pair<TestSession, List<Pair<Route, Pop>>> {
+        val selected = store.selectedPops
+        val available = if (store.freeAccount) pops.filter { !it.premium } else pops
+        val targets = if (selected.isEmpty()) available else available.filter { it.key in selected }
+        val session = TestSession(
+            id = System.currentTimeMillis().toString(),
+            created = System.currentTimeMillis(),
+            pops = targets.map { it.key },
+            protocols = store.protocols,
+        )
+        return session to plan(store, pops)
+    }
+
+    /** What [session] still has to test. */
+    fun remaining(session: TestSession, pops: List<Pop>): List<Pair<Route, Pop>> {
+        val byKey = pops.associateBy { it.key }
+        val done = resultsOf(session.id).map { Triple(it.popKey, it.protocol, it.port) }.toSet()
+        val out = mutableListOf<Pair<Route, Pop>>()
+        for ((proto, ports) in session.protocols) for (port in ports) for (key in session.pops) {
+            val pop = byKey[key] ?: continue // no longer in the server list
+            if (Triple(key, proto, port) !in done) out += Route(proto, port) to pop
+        }
+        return out
     }
 
     fun plan(store: Store, pops: List<Pop>): List<Pair<Route, Pop>> {
@@ -72,15 +140,23 @@ object TestRunner {
         return out
     }
 
-    fun start(context: Context, store: Store, tasks: List<Pair<Route, Pop>>) {
+    fun start(context: Context, store: Store, session: TestSession, tasks: List<Pair<Route, Pop>>) {
         if (job?.isActive == true || tasks.isEmpty()) return
         val app = context.applicationContext
+        store.saveSession(session)
+        _sessions.value = (listOf(session) + _sessions.value.filter { it.id != session.id }).sortedByDescending { it.created }
+        _current.value = session.id
         _state.value = RunState(running = true, total = tasks.size)
         job = scope.launch {
             var finalStep = Step.DONE
             var detail = ""
             try {
-                finalStep = run(app, store, tasks)
+                finalStep = run(app, store, session.id, tasks)
+                if (finalStep == Step.DONE) {
+                    val done = session.copy(finished = true)
+                    store.saveSession(done)
+                    _sessions.value = _sessions.value.map { if (it.id == done.id) done else it }
+                }
             } catch (e: AutomationException) {
                 finalStep = Step.ERROR
                 detail = e.message ?: ""
@@ -145,13 +221,13 @@ object TestRunner {
         }
     }
 
-    private suspend fun run(context: Context, store: Store, tasks: List<Pair<Route, Pop>>): Step {
+    private suspend fun run(context: Context, store: Store, sessionId: String, tasks: List<Pair<Route, Pop>>): Step {
         val assisted = store.assisted
         val service = WindscribeAccessibilityService.instance
         if (!assisted && service == null) throw AutomationException("the accessibility service is off")
         if (store.keepScreenOn) withContext(Dispatchers.Main) { service?.setKeepScreenOn(true) }
         try {
-            return runTasks(context, store, tasks, assisted, service)
+            return runTasks(context, store, sessionId, tasks, assisted, service)
         } finally {
             withContext(NonCancellable + Dispatchers.Main) { service?.setKeepScreenOn(false) }
         }
@@ -160,6 +236,7 @@ object TestRunner {
     private suspend fun runTasks(
         context: Context,
         store: Store,
+        sessionId: String,
         tasks: List<Pair<Route, Pop>>,
         assisted: Boolean,
         service: WindscribeAccessibilityService?,
@@ -212,6 +289,7 @@ object TestRunner {
             }
             val ok = connected && ping != null && ping.loss < 100.0
             val result = TestResult(
+                session = sessionId,
                 popKey = pop.key, label = pop.label, country = pop.country,
                 protocol = route.protocol, port = route.port,
                 status = if (ok) TestResult.STATUS_SUCCESS else TestResult.STATUS_FAILURE,
