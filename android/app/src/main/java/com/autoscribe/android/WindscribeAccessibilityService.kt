@@ -14,7 +14,10 @@ import android.view.accessibility.AccessibilityNodeInfo
 import kotlinx.coroutines.delay
 import java.io.File
 
-class AutomationException(message: String) : Exception(message)
+open class AutomationException(message: String) : Exception(message)
+
+/** The server is not in Windscribe's list (e.g. premium-only on a free account, or removed). */
+class LocationMissingException(message: String) : AutomationException(message)
 
 /**
  * Drives the official Windscribe app through its UI, the way a person would.
@@ -243,7 +246,7 @@ class WindscribeAccessibilityService : AccessibilityService() {
         }
         if (target == null) {
             findById(Ui.SEARCH_CLOSE_IDS)?.let { click(it) }
-            throw AutomationException("could not find ${pop.label} in Windscribe's list")
+            throw LocationMissingException("could not find ${pop.label} in Windscribe's list")
         }
         if (!click(target)) throw AutomationException("could not tap ${pop.label}")
     }

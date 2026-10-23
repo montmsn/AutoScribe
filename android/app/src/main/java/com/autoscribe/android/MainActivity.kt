@@ -32,6 +32,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
@@ -73,8 +74,11 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        val list = findViewById<RecyclerView>(R.id.list)
+        // The header scrolls with the results, so the whole screen is one list.
+        val header = layoutInflater.inflate(R.layout.header_main, list, false)
 
-        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
+        val toolbar = header.findViewById<MaterialToolbar>(R.id.toolbar)
         toolbar.inflateMenu(R.menu.main)
         toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
@@ -87,31 +91,31 @@ class MainActivity : AppCompatActivity() {
             true
         }
 
-        serviceStatus = findViewById(R.id.serviceStatus)
-        planSummary = findViewById(R.id.planSummary)
-        btnStart = findViewById(R.id.btnStart)
-        stepTitle = findViewById(R.id.stepTitle)
-        stepTarget = findViewById(R.id.stepTarget)
-        ring = findViewById(R.id.ring)
-        ringText = findViewById(R.id.ringText)
-        locationsValue = findViewById(R.id.locationsValue)
-        protocolsValue = findViewById(R.id.protocolsValue)
-        bestCard = findViewById(R.id.bestCard)
-        bestTitle = findViewById(R.id.bestTitle)
-        bestSubtitle = findViewById(R.id.bestSubtitle)
-        empty = findViewById(R.id.empty)
-        phases = findViewById(R.id.phases)
-        statTested = findViewById(R.id.statTested)
-        statWorking = findViewById(R.id.statWorking)
-        statRate = findViewById(R.id.statRate)
-        statBest = findViewById(R.id.statBest)
+        serviceStatus = header.findViewById(R.id.serviceStatus)
+        planSummary = header.findViewById(R.id.planSummary)
+        btnStart = header.findViewById(R.id.btnStart)
+        stepTitle = header.findViewById(R.id.stepTitle)
+        stepTarget = header.findViewById(R.id.stepTarget)
+        ring = header.findViewById(R.id.ring)
+        ringText = header.findViewById(R.id.ringText)
+        locationsValue = header.findViewById(R.id.locationsValue)
+        protocolsValue = header.findViewById(R.id.protocolsValue)
+        bestCard = header.findViewById(R.id.bestCard)
+        bestTitle = header.findViewById(R.id.bestTitle)
+        bestSubtitle = header.findViewById(R.id.bestSubtitle)
+        empty = header.findViewById(R.id.empty)
+        phases = header.findViewById(R.id.phases)
+        statTested = header.findViewById(R.id.statTested)
+        statWorking = header.findViewById(R.id.statWorking)
+        statRate = header.findViewById(R.id.statRate)
+        statBest = header.findViewById(R.id.statBest)
         buildPhases()
-        tabs = findViewById(R.id.tabs)
+        tabs = header.findViewById(R.id.tabs)
 
         serviceStatus.setOnClickListener { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
-        findViewById<View>(R.id.cardLocations).setOnClickListener { showLocations() }
-        findViewById<View>(R.id.cardProtocols).setOnClickListener { showProtocols() }
-        findViewById<View>(R.id.btnConnectBest).setOnClickListener {
+        header.findViewById<View>(R.id.cardLocations).setOnClickListener { showLocations() }
+        header.findViewById<View>(R.id.cardProtocols).setOnClickListener { showProtocols() }
+        header.findViewById<View>(R.id.btnConnectBest).setOnClickListener {
             TestRunner.best(TestRunner.results.value).firstOrNull()?.let { connectToResult(it) }
         }
         btnStart.setOnClickListener { if (TestRunner.state.value.running) TestRunner.stop() else startTest() }
@@ -124,13 +128,16 @@ class MainActivity : AppCompatActivity() {
             override fun onTabReselected(tab: TabLayout.Tab) {}
         })
 
-        val list = findViewById<RecyclerView>(R.id.list)
         list.layoutManager = LinearLayoutManager(this)
-        list.adapter = adapter
+        list.adapter = ConcatAdapter(HeaderAdapter(header), adapter)
+        val hero = header.findViewById<View>(R.id.hero)
+        val heroTop = hero.paddingTop
         // targetSdk 35 draws edge to edge: keep the last card above the navigation bar.
         val basePadding = list.paddingBottom
         ViewCompat.setOnApplyWindowInsetsListener(list) { v, insets ->
-            val bottom = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            hero.setPadding(hero.paddingLeft, heroTop + bars.top, hero.paddingRight, hero.paddingBottom)
+            val bottom = bars.bottom
             v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, basePadding + bottom)
             insets
         }
@@ -544,6 +551,13 @@ class MainActivity : AppCompatActivity() {
 
     // ----------------------------------------------------------------- adapters
 
+    /** A single fixed item: the header view built in onCreate. */
+    private class HeaderAdapter(private val view: View) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+        override fun getItemCount() = 1
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = object : RecyclerView.ViewHolder(view) {}
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {}
+    }
+
     private inner class ResultAdapter : RecyclerView.Adapter<ResultAdapter.Holder>() {
         private var items: List<TestResult> = emptyList()
 
@@ -577,10 +591,9 @@ class MainActivity : AppCompatActivity() {
             h.rank.text = (position + 1).toString()
             h.title.text = r.label
             h.route.text = r.route.label
-            h.subtitle.text = getString(
-                R.string.result_detail, r.country,
-                r.loss?.let { "%.0f".format(it) } ?: "-", "%.1f".format(r.duration),
-            )
+            h.subtitle.text = if (r.loss != null) getString(
+                R.string.result_detail, r.country, "%.0f".format(r.loss), "%.1f".format(r.duration),
+            ) else r.country
             // Green under 120 ms, amber under 250 ms, red above or when the route failed.
             val (fg, bg) = when {
                 !r.ok || r.ping == null -> R.color.bad to R.color.bad_bg

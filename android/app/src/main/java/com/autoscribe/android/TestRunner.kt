@@ -192,8 +192,12 @@ object TestRunner {
                 }
                 update(Step.CONNECT)
                 t0 = System.currentTimeMillis()
-                automate(context) { service.connectTo(pop) }
-                connected = waitVpn(context, true, store.connectTimeout * 1000L)
+                connected = try {
+                    automate(context) { service.connectTo(pop) }
+                    waitVpn(context, true, store.connectTimeout * 1000L)
+                } catch (e: LocationMissingException) {
+                    false // recorded as a failure below; move on to the next server
+                }
             }
             val duration = (System.currentTimeMillis() - t0) / 1000.0
 
