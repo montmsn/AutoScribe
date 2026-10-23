@@ -177,12 +177,12 @@ class WindscribeAccessibilityService : AccessibilityService() {
             findById(Ui.SEARCH_INPUT_IDS) ?: allNodes().firstOrNull { it.isEditable && it.isVisibleToUser }
         } ?: throw AutomationException("could not find the search field")
         click(input)
-        val args = Bundle().apply {
-            putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, pop.city)
-        }
         // The Compose text field is a descendant of the tagged node.
         val editable = findEditable(input) ?: input
-        editable.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
+        // Windscribe keeps the previous query; typing the same text again does not search, so clear it first.
+        setText(editable, "")
+        delay(400)
+        setText(findEditable(findById(Ui.SEARCH_INPUT_IDS) ?: input) ?: editable, pop.city)
         delay(900)
 
         // Search rows read "<city> <nickname>", e.g. "Toronto Comfort Zone".
@@ -203,6 +203,13 @@ class WindscribeAccessibilityService : AccessibilityService() {
             throw AutomationException("could not find ${pop.label} in Windscribe's list")
         }
         if (!click(target)) throw AutomationException("could not tap ${pop.label}")
+    }
+
+    private fun setText(node: AccessibilityNodeInfo, text: String) {
+        val args = Bundle().apply {
+            putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
+        }
+        node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
     }
 
     private fun findEditable(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {

@@ -66,4 +66,12 @@
     <string name="result_detail">%1$s · از دست رفتن %2$s%% · %3$s ثانیه</string>
     <string name="ms">%1$s ms</string>
     <string name="failed">ناموفق</string>
+    <string name="stat_tested">تست‌شده</string>
+    <string name="stat_working">سالم</string>
+    <string name="stat_rate">موفقیت</string>
+    <string name="stat_best">بهترین ms</string>
+    <string name="phase_disconnect">قطع</string>
+    <string name="phase_route">مسیر</string>
+    <string name="phase_connect">اتصال</string>
+    <string name="phase_ping">پینگ</string>
 </resources>

@@ -66,4 +66,12 @@
     <string name="result_detail">%1$s · потери %2$s%% · %3$s с</string>
     <string name="ms">%1$s мс</string>
     <string name="failed">Ошибка</string>
+    <string name="stat_tested">Проверено</string>
+    <string name="stat_working">Рабочих</string>
+    <string name="stat_rate">Успех</string>
+    <string name="stat_best">Лучший мс</string>
+    <string name="phase_disconnect">Отключение</string>
+    <string name="phase_route">Маршрут</string>
+    <string name="phase_connect">Подключение</string>
+    <string name="phase_ping">Пинг</string>
 </resources>

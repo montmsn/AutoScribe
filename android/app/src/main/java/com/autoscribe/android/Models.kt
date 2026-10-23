@@ -31,6 +31,7 @@ data class TestResult(
 ) {
     val ok: Boolean get() = status == STATUS_SUCCESS
     val route: Route get() = Route(protocol, port)
+    val countryCode: String get() = popKey.substringBefore("|")
 
     companion object {
         const val STATUS_SUCCESS = "SUCCESS"

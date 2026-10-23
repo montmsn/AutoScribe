@@ -62,6 +62,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var bestTitle: TextView
     private lateinit var bestSubtitle: TextView
     private lateinit var empty: TextView
+    private lateinit var phases: LinearLayout
+    private lateinit var statTested: TextView
+    private lateinit var statWorking: TextView
+    private lateinit var statRate: TextView
+    private lateinit var statBest: TextView
     private lateinit var tabs: TabLayout
     private val adapter = ResultAdapter()
 
@@ -95,6 +100,12 @@ class MainActivity : AppCompatActivity() {
         bestTitle = findViewById(R.id.bestTitle)
         bestSubtitle = findViewById(R.id.bestSubtitle)
         empty = findViewById(R.id.empty)
+        phases = findViewById(R.id.phases)
+        statTested = findViewById(R.id.statTested)
+        statWorking = findViewById(R.id.statWorking)
+        statRate = findViewById(R.id.statRate)
+        statBest = findViewById(R.id.statBest)
+        buildPhases()
         tabs = findViewById(R.id.tabs)
 
         serviceStatus.setOnClickListener { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
@@ -178,6 +189,7 @@ class MainActivity : AppCompatActivity() {
             s.detail.isNotEmpty() -> s.detail
             else -> getString(R.string.hero_hint)
         }
+        renderPhases(s)
         if (!s.running) {
             renderService()
             renderPlan()
@@ -186,10 +198,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun renderResults(results: List<TestResult>) {
         val best = TestRunner.best(results)
+        val working = results.count { it.ok }
+        statTested.text = results.size.toString()
+        statWorking.text = working.toString()
+        statRate.text = if (results.isEmpty()) "—" else "${working * 100 / results.size}%"
+        statBest.text = best.firstOrNull()?.ping?.let { "%.0f".format(it) } ?: "—"
         val top = best.firstOrNull()
         bestCard.visibility = if (top == null) View.GONE else View.VISIBLE
         if (top != null) {
-            bestTitle.text = "${top.label} · ${top.route.label}"
+            bestTitle.text = "${flag(top.countryCode)}  ${top.label} · ${top.route.label}"
             bestSubtitle.text = getString(R.string.best_detail, top.country, formatPing(top.ping))
         }
         val shown = if (tabs.selectedTabPosition == 1) results.asReversed() else best
@@ -486,6 +503,40 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, R.string.copied, Toast.LENGTH_SHORT).show()
     }
 
+    /** Builds the Disconnect → Route → Connect → Ping pills in the header. */
+    private fun buildPhases() {
+        PHASES.forEachIndexed { i, (_, label) ->
+            phases.addView(TextView(this).apply {
+                setText(label)
+                textSize = 11f
+                gravity = Gravity.CENTER
+                setPadding(dp(4), dp(5), dp(4), dp(5))
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    if (i > 0) marginStart = dp(6)
+                }
+            })
+        }
+    }
+
+    private fun renderPhases(s: RunState) {
+        phases.visibility = if (s.running) View.VISIBLE else View.GONE
+        val active = PHASES.indexOfFirst { it.first.contains(s.step) }
+        for (i in 0 until phases.childCount) {
+            val pill = phases.getChildAt(i) as TextView
+            val on = i == active
+            pill.setBackgroundResource(if (on) R.drawable.bg_pill else R.drawable.bg_chip)
+            pill.setTextColor(ContextCompat.getColor(this, if (on) R.color.brand_dark else R.color.on_hero))
+            pill.alpha = if (on || i < active) 1f else 0.6f
+            pill.setTypeface(null, if (on) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
+        }
+    }
+
+    /** Turns a two-letter country code into its flag emoji. */
+    private fun flag(code: String): String {
+        if (code.length != 2 || !code.all { it.isLetter() }) return "🌐"
+        return code.uppercase().map { String(Character.toChars(0x1F1E6 + (it - 'A'))) }.joinToString("")
+    }
+
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
     // ----------------------------------------------------------------- adapters
@@ -496,7 +547,9 @@ class MainActivity : AppCompatActivity() {
         private var ranked = true
 
         inner class Holder(v: View) : RecyclerView.ViewHolder(v) {
+            val flag: TextView = v.findViewById(R.id.flag)
             val rank: TextView = v.findViewById(R.id.rank)
+            val route: TextView = v.findViewById(R.id.route)
             val title: TextView = v.findViewById(R.id.title)
             val subtitle: TextView = v.findViewById(R.id.subtitle)
             val badge: TextView = v.findViewById(R.id.badge)
@@ -516,8 +569,11 @@ class MainActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(h: Holder, position: Int) {
             val r = items[position]
-            h.rank.text = if (ranked) (position + 1).toString() else if (r.ok) "✓" else "✕"
-            h.title.text = "${r.label} · ${r.route.label}"
+            h.flag.text = flag(r.countryCode)
+            h.rank.visibility = if (ranked) View.VISIBLE else View.GONE
+            h.rank.text = (position + 1).toString()
+            h.title.text = r.label
+            h.route.text = r.route.label
             h.subtitle.text = getString(
                 R.string.result_detail, r.country,
                 r.loss?.let { "%.0f".format(it) } ?: "-", "%.1f".format(r.duration),
@@ -581,7 +637,7 @@ class MainActivity : AppCompatActivity() {
             when (val row = rows[position]) {
                 is String -> {
                     val keys = pops.filter { it.country == row }.map { it.key }
-                    box.text = row
+                    box.text = "${flag(pops.firstOrNull { it.country == row }?.countryCode.orEmpty())}  $row"
                     box.isChecked = keys.all { it in selected }
                     box.setOnCheckedChangeListener { _, c ->
                         if (c) selected.addAll(keys) else selected.removeAll(keys.toSet())
@@ -603,5 +659,11 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val DUMP_DELAY_MS = 10_000L
+        private val PHASES = listOf(
+            setOf(Step.DISCONNECT, Step.WAIT_USER_DISCONNECT) to R.string.phase_disconnect,
+            setOf(Step.PROTOCOL) to R.string.phase_route,
+            setOf(Step.CONNECT, Step.WAIT_USER) to R.string.phase_connect,
+            setOf(Step.PING) to R.string.phase_ping,
+        )
     }
 }

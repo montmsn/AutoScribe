@@ -67,4 +67,12 @@
     <string name="result_detail">%1$s · loss %2$s%% · %3$s s</string>
     <string name="ms">%1$s ms</string>
     <string name="failed">Failed</string>
+    <string name="stat_tested">Tested</string>
+    <string name="stat_working">Working</string>
+    <string name="stat_rate">Success</string>
+    <string name="stat_best">Best ms</string>
+    <string name="phase_disconnect">Disconnect</string>
+    <string name="phase_route">Route</string>
+    <string name="phase_connect">Connect</string>
+    <string name="phase_ping">Ping</string>
 </resources>
