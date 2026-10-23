@@ -78,6 +78,8 @@ class MainActivity : AppCompatActivity() {
         app.takeCrash()?.let { showCrash(it); return }
         setContentView(R.layout.activity_main)
         val list = findViewById<RecyclerView>(R.id.list)
+        // Must be set before inflating the header against the list (it builds RecyclerView.LayoutParams).
+        list.layoutManager = LinearLayoutManager(this)
         // The header scrolls with the results, so the whole screen is one list.
         val header = layoutInflater.inflate(R.layout.header_main, list, false)
 
@@ -131,7 +133,6 @@ class MainActivity : AppCompatActivity() {
             override fun onTabReselected(tab: TabLayout.Tab) {}
         })
 
-        list.layoutManager = LinearLayoutManager(this)
         list.adapter = ConcatAdapter(HeaderAdapter(header), adapter)
         val hero = header.findViewById<View>(R.id.hero)
         val heroTop = hero.paddingTop
