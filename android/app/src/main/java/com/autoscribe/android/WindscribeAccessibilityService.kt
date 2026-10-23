@@ -228,7 +228,9 @@ class WindscribeAccessibilityService : AccessibilityService() {
         // Windscribe keeps the previous query; typing the same text again does not search, so clear it first.
         setText(editable, "")
         delay(400)
-        setText(findEditable(findById(Ui.SEARCH_INPUT_IDS) ?: input) ?: editable, pop.city)
+        // Windscribe matches the query against both city and nickname; the nickname is nearly unique,
+        // so searching it keeps the result list short and the row on screen.
+        setText(findEditable(findById(Ui.SEARCH_INPUT_IDS) ?: input) ?: editable, pop.nick.ifEmpty { pop.city })
         delay(900)
 
         // Search rows read "<city> <nickname>", e.g. "Toronto Comfort Zone".
@@ -238,11 +240,15 @@ class WindscribeAccessibilityService : AccessibilityService() {
             n.isVisibleToUser && !n.isEditable &&
                 (rowText.any { l.equals(it, true) } || (pop.nick.isNotEmpty() && l.endsWith(pop.nick, true)))
         }
-        var target = waitFor(2500) { find() }
-        if (target == null) {
-            // Results may be grouped under a collapsed country row.
-            findByLabel(listOf(pop.country))?.let { click(it); delay(600) }
-            target = waitFor(2500) { find() }
+        // Search results come grouped by country and already expanded. Tapping the country row would
+        // collapse it, so if the row is not on screen yet, scroll the list instead.
+        var target = waitFor(4000) { find() }
+        repeat(6) {
+            if (target != null) return@repeat
+            val scrollable = allNodes().firstOrNull { it.isScrollable && it.isVisibleToUser }
+            if (scrollable?.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD) != true) return@repeat
+            delay(500)
+            target = find()
         }
         if (target == null) {
             findById(Ui.SEARCH_CLOSE_IDS)?.let { click(it) }

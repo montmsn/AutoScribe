@@ -28,12 +28,14 @@ object Locations {
             val country = entry.optString("name", "Unknown").trim()
             val code = entry.optString("country_code", "").trim()
             val continent = entry.optString("continent", "Unknown").trim()
+            val countryPremium = entry.optInt("premium_only", 0) == 1
             val pops = entry.optJSONArray("pops") ?: continue
             for (i in 0 until pops.length()) {
                 val pop = pops.optJSONObject(i) ?: continue
                 if (pop.optInt("status", 1) != 1) continue // offline/disabled nodes
                 val name = pop.optString("name", "").trim()
-                if (name.isNotEmpty()) result += Pop(country, code, continent, name)
+                val premium = countryPremium || pop.optInt("is_premium", 0) == 1
+                if (name.isNotEmpty()) result += Pop(country, code, continent, name, premium)
             }
         }
         return result.sortedWith(compareBy({ it.country }, { it.name }))

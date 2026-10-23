@@ -62,7 +62,8 @@ object TestRunner {
 
     fun plan(store: Store, pops: List<Pop>): List<Pair<Route, Pop>> {
         val selected = store.selectedPops
-        val targets = if (selected.isEmpty()) pops else pops.filter { it.key in selected }
+        val available = if (store.freeAccount) pops.filter { !it.premium } else pops
+        val targets = if (selected.isEmpty()) available else available.filter { it.key in selected }
         val tested = if (store.skipTested) _results.value.map { Triple(it.popKey, it.protocol, it.port) }.toSet() else emptySet()
         val out = mutableListOf<Pair<Route, Pop>>()
         for ((proto, ports) in store.protocols) for (port in ports) for (pop in targets) {

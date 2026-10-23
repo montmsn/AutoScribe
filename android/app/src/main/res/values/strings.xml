@@ -78,4 +78,6 @@
     <string name="step_paused">Paused – unlock the phone to continue</string>
     <string name="keep_screen_on">Keep the screen on during tests</string>
     <string name="keep_screen_on_hint">The phone will not lock while testing. If you lock it yourself, the test pauses and continues after you unlock.</string>
+    <string name="free_account">Free Windscribe account</string>
+    <string name="free_account_hint">Skips Pro-only servers (marked ⭐ Pro), which free accounts cannot use.</string>
 </resources>

@@ -53,6 +53,11 @@ class Store(private val context: Context) {
         get() = prefs.getBoolean("skip_tested", true)
         set(v) = prefs.edit().putBoolean("skip_tested", v).apply()
 
+    /** Free Windscribe accounts cannot connect to Pro servers, so those are left out of the plan. */
+    var freeAccount: Boolean
+        get() = prefs.getBoolean("free_account", false)
+        set(v) = prefs.edit().putBoolean("free_account", v).apply()
+
     /** Keeps the screen awake while a test runs, so the phone does not lock mid-test. */
     var keepScreenOn: Boolean
         get() = prefs.getBoolean("keep_screen_on", true)

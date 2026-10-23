@@ -170,7 +170,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun renderPlan() {
         val selected = store.selectedPops
-        val locations = if (selected.isEmpty()) app.pops.size else app.pops.count { it.key in selected }
+        val usable = if (store.freeAccount) app.pops.filter { !it.premium } else app.pops
+        val locations = if (selected.isEmpty()) usable.size else usable.count { it.key in selected }
         val routes = store.protocols.values.sumOf { it.size }
         val pending = TestRunner.plan(store, app.pops).size
         locationsValue.text = if (selected.isEmpty()) getString(R.string.locations_all, locations)
@@ -407,6 +408,8 @@ class MainActivity : AppCompatActivity() {
         val timeout = field(R.string.connect_timeout, store.connectTimeout.toString(), true)
         val stopFirst = switch(R.string.stop_on_success, store.stopOnSuccess)
         val skip = switch(R.string.skip_tested, store.skipTested)
+        val free = switch(R.string.free_account, store.freeAccount)
+        root.addView(TextView(this).apply { setText(R.string.free_account_hint); textSize = 12f })
         val keepOn = switch(R.string.keep_screen_on, store.keepScreenOn)
         root.addView(TextView(this).apply { setText(R.string.keep_screen_on_hint); textSize = 12f })
         val assisted = switch(R.string.assisted_mode, store.assisted)
@@ -421,6 +424,7 @@ class MainActivity : AppCompatActivity() {
                 store.connectTimeout = timeout.text.toString().toIntOrNull()?.coerceIn(5, 120) ?: 25
                 store.stopOnSuccess = stopFirst.isChecked
                 store.skipTested = skip.isChecked
+                store.freeAccount = free.isChecked
                 store.keepScreenOn = keepOn.isChecked
                 store.assisted = assisted.isChecked
                 renderService()
@@ -662,7 +666,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 is Pop -> {
-                    box.text = row.label
+                    box.text = if (row.premium) "${row.label}  ⭐ Pro" else row.label
                     box.isChecked = row.key in selected
                     box.setOnCheckedChangeListener { _, c ->
                         if (c) selected += row.key else selected -= row.key

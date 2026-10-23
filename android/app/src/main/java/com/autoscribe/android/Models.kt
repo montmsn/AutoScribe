@@ -6,6 +6,7 @@ data class Pop(
     val countryCode: String,
     val continent: String,
     val name: String,
+    val premium: Boolean = false,
 ) {
     val city: String get() = name.substringBefore(" - ").trim()
     val nick: String get() = if (" - " in name) name.substringAfter(" - ").trim() else ""

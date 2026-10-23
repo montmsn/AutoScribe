@@ -77,4 +77,6 @@
     <string name="step_paused">مکث – برای ادامه قفل گوشی را باز کنید</string>
     <string name="keep_screen_on">روشن نگه داشتن صفحه هنگام تست</string>
     <string name="keep_screen_on_hint">تا پایان تست گوشی قفل نمی‌شود. اگر خودتان قفلش کنید، تست مکث می‌کند و بعد از باز کردن قفل ادامه می‌دهد.</string>
+    <string name="free_account">حساب رایگان Windscribe</string>
+    <string name="free_account_hint">سرورهای مخصوص Pro (با علامت ⭐ Pro) را که حساب رایگان به آن‌ها دسترسی ندارد رد می‌کند.</string>
 </resources>

@@ -77,4 +77,6 @@
     <string name="step_paused">Пауза – разблокируйте телефон, чтобы продолжить</string>
     <string name="keep_screen_on">Не выключать экран во время теста</string>
     <string name="keep_screen_on_hint">Телефон не заблокируется во время теста. Если заблокировать его вручную, тест встанет на паузу и продолжится после разблокировки.</string>
+    <string name="free_account">Бесплатный аккаунт Windscribe</string>
+    <string name="free_account_hint">Пропускает серверы только для Pro (⭐ Pro), недоступные бесплатным аккаунтам.</string>
 </resources>
