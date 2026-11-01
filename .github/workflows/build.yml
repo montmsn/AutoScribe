@@ -119,8 +119,20 @@ jobs:
           path: artifacts
           merge-multiple: true
 
-      - uses: softprops/action-gh-release@v2
+      - uses: actions/checkout@v4
         with:
-          files: |
-            artifacts/*.zip
-            artifacts/*.apk
+          path: src
+          sparse-checkout: .github
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          cd artifacts
+          for f in AutoScribe-*; do mv "$f" "AutoScribe-$TAG-${f#AutoScribe-}"; done
+          ls -l
+          sed "s/__TAG__/$TAG/g" ../src/.github/release-notes.md > ../notes.md
+          gh release delete "$TAG" --yes || true
+          gh release create "$TAG" --verify-tag --title "AutoScribe $TAG" --notes-file ../notes.md AutoScribe-*
