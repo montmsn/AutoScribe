@@ -23,7 +23,7 @@ import time
 import urllib.request
 
 APP_NAME = "AutoScribe"
-APP_VERSION = "3.1.1"
+APP_VERSION = "2.1.0"
 
 IS_WINDOWS = platform.system() == "Windows"
 
