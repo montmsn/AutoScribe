@@ -706,6 +706,13 @@ AS.onEvent = function (ev) {
         if (!ev.stopped && AS.results.length) toast(t("finished_toast", { ok: num(ev.ok), fail: num(ev.fail) }), "success", { action: () => setView("best"), actionText: t("tab_best"), ms: 7000 });
       }
       renderData(); renderHero();
+      // Re-sync from the database in case any result event was lost on the way (seen on macOS).
+      if (!AS.demo && window.pywebview) window.pywebview.api.results().then((rows) => {
+        if (Array.isArray(rows) && rows.length > AS.results.length) {
+          AS.results = rows.map((r, i) => Object.assign(r, { id: i }));
+          renderData(); renderHero();
+        }
+      }).catch(() => {});
       break;
     }
     case "manual_done": {

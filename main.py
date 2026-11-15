@@ -1,6 +1,7 @@
 """AutoScribe desktop app: a pywebview window running the HTML interface in web/, driving engine.py."""
 import json
 import os
+import queue
 import sys
 import threading
 
@@ -22,13 +23,20 @@ class Bridge:
 
     def __init__(self):
         self.window = None
-        self._lock = threading.Lock()
+        self._queue = queue.Queue()
+        threading.Thread(target=self._pump, daemon=True).start()
 
     def emit(self, kind, **data):
+        """Never blocks the caller. On macOS evaluate_js waits for the main thread, so calling it from the
+        worker could stall the test (and the Stop button) or silently drop results; a single sender thread
+        delivers events in order instead."""
         if self.window is None:
             return
-        payload = json.dumps({"type": kind, **data}, default=str)
-        with self._lock:
+        self._queue.put(json.dumps({"type": kind, **data}, default=str))
+
+    def _pump(self):
+        while True:
+            payload = self._queue.get()
             try:
                 self.window.evaluate_js(f"window.AS && AS.onEvent({payload})")
             except Exception as e:
