@@ -3,6 +3,11 @@ name: Build AutoScribe
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Publish a release with this tag (e.g. v2.1.1); leave empty to only build"
+        required: false
+        default: ""
   push:
     tags:
       - "v*"
@@ -109,7 +114,7 @@ jobs:
 
   release:
     needs: [build, android]
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || inputs.release_tag != ''
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -128,11 +133,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ inputs.release_tag || github.ref_name }}
+          TARGET: ${{ github.sha }}
         run: |
           cd artifacts
           for f in AutoScribe-*; do mv "$f" "AutoScribe-$TAG-${f#AutoScribe-}"; done
           ls -l
           sed "s/__TAG__/$TAG/g" ../src/.github/release-notes.md > ../notes.md
           gh release delete "$TAG" --yes || true
-          gh release create "$TAG" --verify-tag --title "AutoScribe $TAG" --notes-file ../notes.md AutoScribe-*
+          if [ "$TAG" = "$GITHUB_REF_NAME" ]; then TAGOPT=--verify-tag; else TAGOPT="--target $TARGET"; fi
+          gh release create "$TAG" $TAGOPT --title "AutoScribe $TAG" --notes-file ../notes.md AutoScribe-*

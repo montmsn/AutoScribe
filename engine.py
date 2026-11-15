@@ -23,9 +23,10 @@ import time
 import urllib.request
 
 APP_NAME = "AutoScribe"
-APP_VERSION = "2.1.0"
+APP_VERSION = "2.1.1"
 
 IS_WINDOWS = platform.system() == "Windows"
+IS_MAC = platform.system() == "Darwin"
 
 PROTO_NAMES = {"wireguard": "WireGuard", "ikev2": "IKEv2", "udp": "UDP", "tcp": "TCP",
                "stealth": "Stealth", "wstunnel": "WStunnel"}
@@ -303,20 +304,33 @@ class PingRunner:
         if IS_WINDOWS:
             cmd = ["ping", "-n", str(count), "-w", str(reply_timeout_ms), host]
         else:
-            cmd = ["ping", "-c", str(count), "-i", str(self.INTERVAL), "-W", str(max(1, reply_timeout_ms // 1000)),
-                   host]
+            # macOS ping takes -W in milliseconds, Linux in seconds.
+            wait = str(reply_timeout_ms) if IS_MAC else str(max(1, reply_timeout_ms // 1000))
+            cmd = ["ping", "-c", str(count), "-i", str(self.INTERVAL), "-W", wait, host]
         try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
-                timeout=count * (reply_timeout_ms / 1000 + 1) + 5, **hidden_process_kwargs())
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+                                    encoding="utf-8", errors="replace", **hidden_process_kwargs())
         except FileNotFoundError:
             return None, "ping command not found"
-        except subprocess.TimeoutExpired:
-            return None, "ping timed out"
+        except Exception as e:
+            return None, str(e)
+        deadline = time.time() + count * (reply_timeout_ms / 1000 + 1) + 5
+        try:
+            while True:
+                try:
+                    stdout, _ = proc.communicate(timeout=0.2)
+                    break
+                except subprocess.TimeoutExpired:
+                    if time.time() > deadline or (stop_event is not None and stop_event.is_set()):
+                        proc.kill()
+                        stdout, _ = proc.communicate()
+                        if time.time() > deadline:
+                            return None, "ping timed out"
+                        break
         except Exception as e:
             return None, str(e)
 
-        times = self.parse(result.stdout)
+        times = self.parse(stdout)
         if not times:
             return None, "no replies"
         return {
@@ -476,22 +490,40 @@ class WindscribeWorker:
     def phase(self, idx, state, secs=None):
         self.app.post(self.app.set_phase, idx, state, secs)
 
-    def run_cli(self, args, timeout=30):
+    def run_cli(self, args, timeout=30, interruptible=False):
+        """Runs windscribe-cli. With interruptible=True, Stop kills the call instead of waiting it out
+        (on macOS 'connect' can block for the whole timeout)."""
         cmd = [self.cli_cmd] + args
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
-                                    timeout=timeout, **hidden_process_kwargs())
-            return result.returncode, result.stdout
-        except subprocess.TimeoutExpired:
-            return -1, ""
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                                    encoding="utf-8", errors="replace", **hidden_process_kwargs())
         except Exception as e:
             self.log(f"CLI Error: {e}", "FAILURE")
             return -1, ""
+        out = []
+        reader = threading.Thread(target=lambda: out.append(proc.stdout.read()), daemon=True)
+        reader.start()
+        deadline = time.time() + timeout
+        while proc.poll() is None:
+            if time.time() > deadline or (interruptible and self.stop_event.is_set()):
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
+                proc.wait()
+                reader.join(1)
+                return -1, "".join(out)
+            time.sleep(0.1)
+        reader.join(2)
+        return proc.returncode, "".join(out)
 
     @staticmethod
     def is_connected_output(out):
-        up = out.upper()
-        return "CONNECTED" in up and "DISCONNECTED" not in up and "CONNECTING" not in up
+        # Prefer the explicit "Connect state:" line when the CLI prints one (it also lists firewall etc.).
+        m = re.search(r"connect(?:ion)? state\s*:\s*([^\n]*)", out, re.I)
+        text = (m.group(1) if m else out).upper()
+        return ("CONNECTED" in text and "DISCONNECT" not in text and "CONNECTING" not in text
+                and "RECONNECT" not in text)
 
     POLL = 0.4  # seconds between status checks
 
@@ -533,22 +565,37 @@ class WindscribeWorker:
                 return False, 0.0
         return False, 0.0
 
+    probe_host = "1.1.1.1"
+
+    def tunnel_works(self, start_time, timeout):
+        """The CLI (notably on macOS) can say 'Connected' before the tunnel has an IP and passes traffic,
+        so a connection only counts once a ping actually goes through it."""
+        while time.time() - start_time < timeout:
+            result, _ = self.pinger.run(self.probe_host, 1, reply_timeout_ms=1500, stop_event=self.stop_event)
+            if result:
+                return True
+            if self.stop_event.wait(self.POLL):
+                return False
+        return False
+
     def connect(self, city, route, timeout, expect_city=None):
-        """Returns (True|False|None, seconds); None means the location is unavailable.
-        The CLI usually blocks until it is connected, so its own output often settles it without polling."""
+        """Returns (True|False|None, seconds); None means the location is unavailable."""
         start_ts = time.time()
-        _, out = self.run_cli(["connect", "-n", city, route], timeout=timeout + 15)
+        _, out = self.run_cli(["connect", "-n", city, route], timeout=timeout + 15, interruptible=True)
         if self.is_invalid_location_output(out):
             return None, 0.0
-        if self.is_connected_output(out):
-            # Confirm once: the CLI output can report success a moment before the tunnel is up.
-            _, status = self.run_cli(["status"])
-            if self.is_connected_output(status) and (not expect_city or expect_city.lower() in status.lower()):
-                return True, time.time() - start_ts
-        return self.wait_for_connection(start_ts, timeout, expect_city)
+        if self.stop_event.is_set():
+            return False, 0.0
+        ok, _ = self.wait_for_connection(start_ts, timeout, expect_city)
+        if ok is None:
+            return None, 0.0
+        if not ok or not self.tunnel_works(start_ts, timeout):
+            return False, 0.0
+        return True, time.time() - start_ts
 
     # -- job control --
     def start(self, work_plan, opts):
+        self.probe_host = opts.get("ping_host") or "1.1.1.1"
         self.stop_event.clear()
         self.running = True
         threading.Thread(target=self._run, args=(work_plan, opts), daemon=True).start()
