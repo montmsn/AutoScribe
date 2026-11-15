@@ -21,9 +21,10 @@ AutoScribe finds the Windscribe servers and protocols that actually work on your
 
 ## What's new in __TAG__
 
-- **Android app** – run tests on your phone.
-- **Test history** – every Android test run is saved as a session.
-- **Resume interrupted tests** – pick up an Android run where it stopped.
+- **macOS: waits for a real connection** – a route only counts as working once traffic actually passes through the tunnel, instead of trusting the CLI's early "Connected".
+- **macOS: results appear live** – test results show up during the run, no restart needed.
+- **Stop works mid-test** – Stop now interrupts a connect or ping in progress right away.
+- **macOS: ping fixed** – ping no longer times out instantly on macOS.
 
 ## Highlights
 
